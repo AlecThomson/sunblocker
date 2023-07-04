@@ -310,6 +310,8 @@ class Sunblocker:
             ax.axvline(x=average + threshold * stdev, linewidth=2, color="k")
             ax.set_xlim(min(bin_edges), max(bin_edges))
             ax.set_title(title)
+            ax.set_xlabel("Amplitude")
+            ax.set_ylabel("Number of visibilities")
 
         return select
 
