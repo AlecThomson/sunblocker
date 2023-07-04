@@ -188,8 +188,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-s",
         "--show",
-        help="Show histogram and cutoff line in a viewgraph",
-        action="store_true",
+        help="Plot name for showing histogram and cutoff line in a viewgraph",
+        default=None,
     )
     parser.add_argument(
         "-D",
