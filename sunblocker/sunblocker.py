@@ -306,8 +306,8 @@ class Sunblocker:
             ax.plot(showgouse, calculated, "g-", label="calculated")
             ax.plot(showgouse, fitted, "r-", label="fitted")
             ax.plot(showgouse, madded, "b-", label="mad")
-            ax.axvline(x=average - threshold * stdev, linewidth=2, color="k")
-            ax.axvline(x=average + threshold * stdev, linewidth=2, color="k")
+            ax.axvline(x=average - threshold * stdev, linewidth=2, color="k", label="Lower threshold")
+            ax.axvline(x=average + threshold * stdev, linewidth=2, color="k", label="Upper threshold")
             ax.set_xlim(min(bin_edges), max(bin_edges))
             ax.set_title(title)
             ax.set_xlabel("Amplitude")
@@ -857,11 +857,12 @@ class Sunblocker:
                 np.flip(griddedvis, axis=0).transpose(),
                 vmin=np.nanmin(griddedvis),
                 vmax=np.nanmax(griddedvis),
-                cmap="Greys",
+                cmap="cubehelix_r",
                 origin=("lower"),
                 interpolation="nearest",
                 extent=[ugrid.max() + duv, ugrid.min(), vgrid.min(), vgrid.max() + duv],
             )
+            plt.colorbar()
             plt.xlabel("u")
             plt.ylabel("v")
             if isinstance(show, str):
@@ -1020,19 +1021,21 @@ class Sunblocker:
             # ax = plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.nanmin(griddedvis),vmax=np.nanmax(griddedvis),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
             average = np.nanmean(griddedvis)
             stdev = np.nanstd(griddedvis)
+            fig = plt.figure()
             ax = plt.subplot(1, 1, 1)
             # plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.maximum(np.nanmin(griddedvis),average-threshold*stdev),vmax=np.minimum(np.nanmax(griddedvis),average+threshold*stdev),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
             # plt.xlabel('u')
             # plt.ylabel('v')
-            ax.imshow(
+            im = ax.imshow(
                 np.flip(griddedvis, axis=0).transpose(),
                 vmin=np.maximum(np.nanmin(griddedvis), average - threshold * stdev),
                 vmax=np.minimum(np.nanmax(griddedvis), average + threshold * stdev),
-                cmap="Greys",
+                cmap="cubehelix_r",
                 origin=("lower"),
                 interpolation="nearest",
                 extent=[ugrid.max() + duv, ugrid.min(), vgrid.min(), vgrid.max() + duv],
             )
+            fig.colorbar(im)
             ax.set_xlabel("u")
             ax.set_ylabel("v")
             for patch in patches:
@@ -1053,8 +1056,8 @@ class Sunblocker:
             # Restrict uvrange to maximum of uvmax and befflaggeduv
             ####
 
-            ax.plot(notflaggeduv[:, 0], notflaggeduv[:, 1], ".b", markersize=0.3)
-            ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3)
+            ax.plot(notflaggeduv[:, 0], notflaggeduv[:, 1], ".b", markersize=0.3, label="Not flagged")
+            ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3, label="Flagged")
             if radrange > 0.0 and angle > 0.0:
                 ax.plot(befflaggeduv[:, 0], befflaggeduv[:, 1], ".g", markersize=0.3)
             if isinstance(show, str):
