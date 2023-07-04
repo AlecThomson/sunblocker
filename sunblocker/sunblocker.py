@@ -1,7 +1,9 @@
 # Copyright (c) 2017 Gyula Istvan Geza Jozsa, Paolo Serra, Kshitij Thorat, Sphesihle Makhatini, NRF (Square Kilometre Array South Africa) - All Rights Reserved
-import matplotlib
 import types
-matplotlib.use('Agg')
+
+import matplotlib
+
+matplotlib.use("Agg")
 
 """
 Class Sunblocker
@@ -16,28 +18,29 @@ Methods:
     readdata            - Open a data set inset and return a few tables
     phazer              - Flag Measurement Set based on scalarly averaged data
 """
+import os
+import sys
+import types
+
+import astropy.coordinates as coordinates
+import astropy.time as time
+import astropy.units as units
+import ephem
+import matplotlib.pyplot as plt
 import numpy as np
 import pyrap.tables as tables
-import matplotlib.pyplot as plt
-import scipy.optimize as opt
 import scipy.constants as scconstants
-import sys
-import os
-from matplotlib.path import Path
+import scipy.optimize as opt
 from matplotlib.patches import PathPatch
-import types
-import astropy.units as units
-import astropy.time as time
-import astropy.coordinates as coordinates
-import ephem
+from matplotlib.path import Path
 from scipy import stats
 
 
 class Sunblocker:
     def __init__(self):
         pass
-    
-    def opensilent(self, inset = None, readonly = True):
+
+    def opensilent(self, inset=None, readonly=True):
         """
         Opening inset with pyrap as a table suppressing any feedback from pyrap
 
@@ -50,12 +53,12 @@ class Sunblocker:
         """
 
         # This is where we check what is opened
-        if type(inset) != type(''):
+        if type(inset) != type(""):
             return inset
-        
+
         old_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        t = tables.table(inset, readonly = readonly)
+        t = tables.table(inset, readonly=readonly)
         sys.stdout.close()
         sys.stdout = old_stdout
         return t
@@ -72,16 +75,16 @@ class Sunblocker:
         Return:
         gaussian() Gaussian
         """
-        return amp*np.exp(-0.5*np.power((x-cent)/sigma,2))
+        return amp * np.exp(-0.5 * np.power((x - cent) / sigma, 2))
 
     def wedge_around_centre(self, coord, radrange, angle):
-        '''
+        """
         Return a boolean array selecting points in a 2-D wedge
 
         Input:
         coord (array-like)    : coordinates of centre
         radrange (float)      : radial range of wedge
-        angle (float)         : width of the wedge in degrees    
+        angle (float)         : width of the wedge in degrees
 
         The radial range of the wedge is the radius of the centre plus and
         minus half of radrange, the angular range is given by the
@@ -89,53 +92,64 @@ class Sunblocker:
         returned, True for all data points with uvcoords inside the wedge,
         False elsewhere.
 
-        '''
+        """
 
         # Number of points in an arc
-        npoints = 100 # This should be enough
+        npoints = 100  # This should be enough
 
-        alpha_min = np.arctan2(coord[0],coord[1])-np.pi*angle/180./2.
-        alpha_max = alpha_min+np.pi*angle/180.
-        rmin = np.sqrt(np.power(coord[0],2)+np.power(coord[1],2))-radrange/2.
-        rmax = rmin+radrange
+        alpha_min = np.arctan2(coord[0], coord[1]) - np.pi * angle / 180.0 / 2.0
+        alpha_max = alpha_min + np.pi * angle / 180.0
+        rmin = np.sqrt(np.power(coord[0], 2) + np.power(coord[1], 2)) - radrange / 2.0
+        rmax = rmin + radrange
 
         # Generate arcs and the polygon
-        a = np.linspace(alpha_min,alpha_max,npoints)
+        a = np.linspace(alpha_min, alpha_max, npoints)
         s = np.sin(a)
         c = np.cos(a)
-        arc1 = zip(rmax*s,rmax*c)
-        arc2 = zip(rmin*np.flipud(s),rmin*np.flipud(c))
-        polygon = arc1+arc2+[arc1[0]]
+        arc1 = zip(rmax * s, rmax * c)
+        arc2 = zip(rmin * np.flipud(s), rmin * np.flipud(c))
+        polygon = arc1 + arc2 + [arc1[0]]
         path = Path(polygon)
         return path
 
     def selwith_path(self, path, uvcoords):
-        '''
+        """
         Return a boolean array indicating coordinates (pairs) inside a polygon path
 
         path                  : a path as returned by matplotlib.path.Path describing a polygon
         uvcoords (array-like) : nx2 array-like of coordinates of points
 
         Output:
-        array-like(dtype = bool) selwith_wedge_around_centre: 
+        array-like(dtype = bool) selwith_wedge_around_centre:
 
         Returns a boolean array flagging points inside the polygon as True
-        '''
+        """
 
         # Create array of tuples
-        points = np.array(zip(uvcoords[:,0], uvcoords[:,1]))
+        points = np.array(zip(uvcoords[:, 0], uvcoords[:, 1]))
         boolarray = path.contains_points(points)
         return boolarray
 
-    def histoclip(self, data, mask, gruvcoord, unflags = None, threshmode = 'fit', threshold = 5., ax = None, title = '', verb = True):
-        """Measure sigma and return a mask indicating data at a distance larger than threshold times sigma from the average 
+    def histoclip(
+        self,
+        data,
+        mask,
+        gruvcoord,
+        unflags=None,
+        threshmode="fit",
+        threshold=5.0,
+        ax=None,
+        title="",
+        verb=True,
+    ):
+        """Measure sigma and return a mask indicating data at a distance larger than threshold times sigma from the average
 
         Input:
         data (ndarray, type = float)   : Input data, one dimension
         mask (ndarray, type = bool)    : Mask indicating data points to ignore for evaluation, same shape as data
         unflags (ndarray, type = bool) : Mask indicating data points not to flag
         gruvcoord (nx2 ndarray, type = float): Array of the same size of data x 2 denoting grid positions of the data
-        threshmode (string)            : Method to determine sigma, 'fit': fit Gaussian at the max to determine sigma, 'fixed': threshold is in absolute units (sigma is 1.), 'mad': use MAD statistics to derive standard deviation, otherwise standard deviation 
+        threshmode (string)            : Method to determine sigma, 'fit': fit Gaussian at the max to determine sigma, 'fixed': threshold is in absolute units (sigma is 1.), 'mad': use MAD statistics to derive standard deviation, otherwise standard deviation
         threshold (float)              : Distance from average beyond which data are flagged in units of sigma
         show (bool)                    : Show histogram to monitor what is happening
         title (string)                 : title of histogram
@@ -162,20 +176,22 @@ class Sunblocker:
         """
         # Copy data
         av = np.copy(data)
-        
+
         # This does not help
         # av[mask==True] = np.nan
 
         # Make a grid
-        ugrid = np.unique(gruvcoord[:,0])
-        vgrid = np.unique(gruvcoord[:,1])
+        ugrid = np.unique(gruvcoord[:, 0])
+        vgrid = np.unique(gruvcoord[:, 1])
 
         # Do this again. We really want a histogram only with values related to the unflagged visibilities
-        uvgridded = np.zeros((ugrid.size*vgrid.size), dtype = float)+np.nan
+        uvgridded = np.zeros((ugrid.size * vgrid.size), dtype=float) + np.nan
         i = 0
         for uu in ugrid:
             for vv in vgrid:
-                active_visibs = av[(gruvcoord[:,0] == uu) * (gruvcoord[:,1] == vv) * (mask != True)]
+                active_visibs = av[
+                    (gruvcoord[:, 0] == uu) * (gruvcoord[:, 1] == vv) * (mask != True)
+                ]
                 if active_visibs.size == 0:
                     uvgridded[i] = np.nan
                 else:
@@ -186,87 +202,122 @@ class Sunblocker:
         # av = np.nanmean(ampar,axis=1)
         npoints = uvgridded[np.isfinite(uvgridded)].size
         if verb:
-            print('Phazer: grid has {:d} nonzero points.'.format(npoints))
+            print("Phazer: grid has {:d} nonzero points.".format(npoints))
         if npoints < 3:
-            print('Phazer: This is not sufficient for any statistics, returning no flags.')
-            return np.zeros(av.shape, dtype = bool)
-        
-        # Find average and standard deviation 
-        average = np.nanmean(uvgridded)
-        stdev  = np.nanstd(uvgridded)
+            print(
+                "Phazer: This is not sufficient for any statistics, returning no flags."
+            )
+            return np.zeros(av.shape, dtype=bool)
 
-        print('average: {}, stdev: {}'.format(average, stdev))
+        # Find average and standard deviation
+        average = np.nanmean(uvgridded)
+        stdev = np.nanstd(uvgridded)
+
+        print("average: {}, stdev: {}".format(average, stdev))
 
         if average == np.nan:
-            print('Phazer: cannot calculate average, returing no flags')
-            return np.zeros(av.shape, dtype = bool)
-        
+            print("Phazer: cannot calculate average, returing no flags")
+            return np.zeros(av.shape, dtype=bool)
+
         if stdev == np.nan:
-            print('Phazer: cannot calculate standard deviation, returing no flags')
-            return np.zeros(av.shape, dtype = bool)
+            print("Phazer: cannot calculate standard deviation, returing no flags")
+            return np.zeros(av.shape, dtype=bool)
 
         med = np.nanmedian(uvgridded)
-        mad = stats.median_abs_deviation(uvgridded, scale='normal', nan_policy='omit')
-        
-        if threshmode == 'fit' or ax != None:
+        mad = stats.median_abs_deviation(uvgridded, scale="normal", nan_policy="omit")
+
+        if threshmode == "fit" or ax != None:
             # Build a histogram
-            hist, bin_edges = np.histogram(uvgridded[np.isfinite(uvgridded)], bins=int(np.sqrt(npoints))+1)
+            hist, bin_edges = np.histogram(
+                uvgridded[np.isfinite(uvgridded)], bins=int(np.sqrt(npoints)) + 1
+            )
             bin_centers = bin_edges[:-1] + 0.5 * (bin_edges[1:] - bin_edges[:-1])
             widthes = bin_edges[1:] - bin_edges[:-1]
 
-            # Find maximum in histogram 
+            # Find maximum in histogram
             maxhi = np.amax(hist)
             maxhiposval = bin_centers[np.argmax(hist)]
 
             # Fit a Gaussian
             try:
-                popt, pcov = opt.curve_fit(self.gaussian, bin_centers, hist, p0 = [maxhiposval, maxhi, stdev/2.])
+                popt, pcov = opt.curve_fit(
+                    self.gaussian,
+                    bin_centers,
+                    hist,
+                    p0=[maxhiposval, maxhi, stdev / 2.0],
+                )
             except:
-                popt = np.array([average, widthes[0]*npoints/(np.sqrt(2*np.pi)*stdev), stdev])
+                popt = np.array(
+                    [
+                        average,
+                        widthes[0] * npoints / (np.sqrt(2 * np.pi) * stdev),
+                        stdev,
+                    ]
+                )
 
-        if threshmode == 'abs':
-            std = 1.
-            ave = 0.
-        if threshmode == 'std':
+        if threshmode == "abs":
+            std = 1.0
+            ave = 0.0
+        if threshmode == "std":
             std = stdev
             ave = average
-        if threshmode == 'mad':
+        if threshmode == "mad":
             std = mad
             ave = med
-        if threshmode == 'fit':
+        if threshmode == "fit":
             std = popt[2]
             ave = popt[0]
 
         # Build a new mask based on the statistics and return it
         #    select = av <= average-threshold*stdev
-        select = (av >= ave+threshold*std)
+        select = av >= ave + threshold * std
         if not isinstance(unflags, type(None)):
             select = select * np.logical_not(unflags)
 
         # Plot histogram and Gaussians
         if ax != None:
             # Calculating overplotted visibilities
-            showgouse = np.linspace(1.5*bin_centers[0]-0.5*bin_centers[1], 1.5*bin_centers[-1]-0.5*bin_centers[-2], 200)
-            calculated = self.gaussian(showgouse, average, widthes[0]*npoints/(np.sqrt(2*np.pi)*stdev), stdev)
+            showgouse = np.linspace(
+                1.5 * bin_centers[0] - 0.5 * bin_centers[1],
+                1.5 * bin_centers[-1] - 0.5 * bin_centers[-2],
+                200,
+            )
+            calculated = self.gaussian(
+                showgouse,
+                average,
+                widthes[0] * npoints / (np.sqrt(2 * np.pi) * stdev),
+                stdev,
+            )
 
             # mad
-            madded = self.gaussian(showgouse, med, widthes[0]*npoints/(np.sqrt(2*np.pi)*mad), mad)
-            
+            madded = self.gaussian(
+                showgouse, med, widthes[0] * npoints / (np.sqrt(2 * np.pi) * mad), mad
+            )
+
             # In case of using only stats, this is right on top
             fitted = self.gaussian(showgouse, popt[0], popt[1], popt[2])
 
-            ax.bar(bin_centers, hist, width=widthes, color = 'y', edgecolor = 'y')
-            ax.plot(showgouse, calculated, 'g-')
-            ax.plot(showgouse, fitted, 'r-')
-            ax.plot(showgouse, madded, 'b-')
-            ax.axvline(x = average-threshold*stdev, linewidth=2, color='k')
-            ax.axvline(x = average+threshold*stdev, linewidth=2, color='k')
+            ax.bar(bin_centers, hist, width=widthes, color="y", edgecolor="y")
+            ax.plot(showgouse, calculated, "g-")
+            ax.plot(showgouse, fitted, "r-")
+            ax.plot(showgouse, madded, "b-")
+            ax.axvline(x=average - threshold * stdev, linewidth=2, color="k")
+            ax.axvline(x=average + threshold * stdev, linewidth=2, color="k")
             ax.set_xlim(min(bin_edges), max(bin_edges))
             ax.set_title(title)
 
         return select
 
-    def readdata(self, inset = None, col = 'DATA', fields = None, channels = None, baselines = None, pol = 'i', verb = False):
+    def readdata(
+        self,
+        inset=None,
+        col="DATA",
+        fields=None,
+        channels=None,
+        baselines=None,
+        pol="i",
+        verb=False,
+    ):
         """Open a data set inset and return a few tables
 
         Input:
@@ -296,63 +347,75 @@ class Sunblocker:
         """
 
         # We really don't want to hear about this
-        if type(inset) ==  type(''):
+        if type(inset) == type(""):
             t = self.opensilent(inset)
         else:
             t = inset
 
         # Read column (think, axes are by default ordered as time, frequency, polarization) and flags, which should have same dimension
         if verb:
-            print('Phazer: reading visibilities.')
+            print("Phazer: reading visibilities.")
         data = t.getcol(col)
         if verb:
-            print('Phazer: reading original flags.')
-        flags = t.getcol('FLAG')
+            print("Phazer: reading original flags.")
+        flags = t.getcol("FLAG")
 
         ### The following two lines belong to test 2
-        #print '1: shape'
-        #print data.shape
+        # print '1: shape'
+        # print data.shape
         ###
 
         # Divide uv coordinates by wavelength, for this use average frequencies in Hz
         # If bandwidth becomes large, we have to come up with something better
         if verb:
-            print('Phazer: acquiring spectral information.')
-        avspecchan = np.average(t.SPECTRAL_WINDOW.getcol('CHAN_FREQ'))
+            print("Phazer: acquiring spectral information.")
+        avspecchan = np.average(t.SPECTRAL_WINDOW.getcol("CHAN_FREQ"))
         if verb:
-            print('Phazer: average wavelength is {:.3f} m.'.format(scconstants.c/avspecchan)) # This is for testing: should be ~0.21 if local HI
+            print(
+                "Phazer: average wavelength is {:.3f} m.".format(
+                    scconstants.c / avspecchan
+                )
+            )  # This is for testing: should be ~0.21 if local HI
 
         if verb:
-            print('Phazer: reading and calculating approximate uv coordinates.')
-        uv = t.getcol('UVW')[:,:2]*avspecchan/scconstants.c
+            print("Phazer: reading and calculating approximate uv coordinates.")
+        uv = t.getcol("UVW")[:, :2] * avspecchan / scconstants.c
 
         # Convert into desired stokes parameters and adjust mask
         i = data.shape[2] - 1
-        stflags = np.logical_not(flags[:,:,0]).astype(float) + np.logical_not(flags[:,:,i]).astype(float)
+        stflags = np.logical_not(flags[:, :, 0]).astype(float) + np.logical_not(
+            flags[:, :, i]
+        ).astype(float)
 
         # if polarisation is i, then take either average or single value, flag the rest
-        if pol == 'i':
+        if pol == "i":
             if verb:
-                print('Phazer: calculating Stokes I.')
+                print("Phazer: calculating Stokes I.")
 
             # Calculate stokes i, reduce the number of polarizations to one, flag if not at least one pol is available
-            with np.errstate(divide='ignore', invalid = 'ignore'):
-                data = (data[:,:,0]*np.logical_not(flags)[:,:,0]+data[:,:,i]*np.logical_not(flags)[:,:,i])/stflags
-            flags = stflags < 1.
-        elif pol == 'q':
+            with np.errstate(divide="ignore", invalid="ignore"):
+                data = (
+                    data[:, :, 0] * np.logical_not(flags)[:, :, 0]
+                    + data[:, :, i] * np.logical_not(flags)[:, :, i]
+                ) / stflags
+            flags = stflags < 1.0
+        elif pol == "q":
             if verb:
-                print('Phazer: calculating Stokes Q.')
+                print("Phazer: calculating Stokes Q.")
 
             # Calculate stokes q, reduce the number of polarizations to one, flag everything if not both pols are available
-            with np.errstate(divide='ignore', invalid = 'ignore'):
-                data = (data[:,:,0]*np.logical_not(flags)[:,:,0]-data[:,:,i]*np.logical_not(flags)[:,:,i])/stflags
-            flags = stflags < 2.
+            with np.errstate(divide="ignore", invalid="ignore"):
+                data = (
+                    data[:, :, 0] * np.logical_not(flags)[:, :, 0]
+                    - data[:, :, i] * np.logical_not(flags)[:, :, i]
+                ) / stflags
+            flags = stflags < 2.0
         else:
-            raise('Polarisation must be i or q.')
+            raise ("Polarisation must be i or q.")
 
         ### The following two lines belong to test 2
-        #print '2: shape'
-        #print data.shape
+        # print '2: shape'
+        # print data.shape
         ###
 
         #        flags[:,:,0] = np.logical_not((stflags.astype(bool)))
@@ -360,55 +423,93 @@ class Sunblocker:
         # Also mask anything not listed in fields
         if not isinstance(fields, type(None)):
             if verb:
-                print('Selecting specified fields.')
-            field = t.getcol('FIELD')
-            select = np.zeros(field.shape, dtype = bool)
+                print("Selecting specified fields.")
+            field = t.getcol("FIELD")
+            select = np.zeros(field.shape, dtype=bool)
             if isinstance(fields, type([])):
                 for i in fields:
                     select |= field == i
             else:
                 select |= field == fields
 
-            flags[np.logical_not(select),:] = True
+            flags[np.logical_not(select), :] = True
 
         # Flag autocorrelations
         # print t.ANTENNA.getcol('NAME')[0]
         if verb:
-            print('Phazer: reading antenna information.')
-        antenna1 = t.getcol('ANTENNA1')
-        antenna2 = t.getcol('ANTENNA2')
+            print("Phazer: reading antenna information.")
+        antenna1 = t.getcol("ANTENNA1")
+        antenna2 = t.getcol("ANTENNA2")
 
         if verb:
-            print('Phazer: de-selecting autocorrelations (if any).')
+            print("Phazer: de-selecting autocorrelations (if any).")
         flags[antenna1 == antenna2] = True
 
         # Select channels and flag everything outside provided channels
         if not isinstance(channels, type(None)):
             if verb:
-                print('Phazer: selecting specified channels.')
-            flags[:,np.logical_not(channels)] = True
+                print("Phazer: selecting specified channels.")
+            flags[:, np.logical_not(channels)] = True
 
         # Select baselines and select everything outside provided baselines
         if not isinstance(baselines, type(None)):
             if verb:
-                print('Phazer: selecting specified baselines.')
-            flags[np.logical_not([i in zip(np.array(baselines)[:,0],np.array(baselines)[:,1]) or i in zip(np.array(baselines)[:,1],np.array(baselines)[:,0]) for i in zip(antenna1, antenna2)])] = True
+                print("Phazer: selecting specified baselines.")
+            flags[
+                np.logical_not(
+                    [
+                        i in zip(np.array(baselines)[:, 0], np.array(baselines)[:, 1])
+                        or i
+                        in zip(np.array(baselines)[:, 1], np.array(baselines)[:, 0])
+                        for i in zip(antenna1, antenna2)
+                    ]
+                )
+            ] = True
 
         # Now put all flagged data to nan:
         if verb:
-            print('Phazer: applying selections to data.')
+            print("Phazer: applying selections to data.")
         data[flags] = np.nan
 
-        antennanames = t.ANTENNA.getcol('NAME')
-        
+        antennanames = t.ANTENNA.getcol("NAME")
+
         # Close only if this has been a string
-        if isinstance(inset, type('')):
+        if isinstance(inset, type("")):
             t.close()
 
         return data, flags, uv, antenna1, antenna2, antennanames
 
-
-    def phazer(self, inset = None, outset = None, col = 'DATA', channels = None, baselines = None, fields = None, imsize = 512, cell = 4, mode = 'all', pol = 'parallel', threshmode = 'fit', threshold = 5., radrange = 0., angle = 0., flagonlyday = False, vampirisms = False, avantsoleil = 0.*units.s, apresnuit = 0.*units.s, avantnuit = 0.*units.s, apresoleil = 0.*units.s, horizon = -34.*units.arcmin, nononsoleil = True, uvmin = 0., uvmax = None, show = None, showdir = '.', dryrun = True, verb = False):
+    def phazer(
+        self,
+        inset=None,
+        outset=None,
+        col="DATA",
+        channels=None,
+        baselines=None,
+        fields=None,
+        imsize=512,
+        cell=4,
+        mode="all",
+        pol="parallel",
+        threshmode="fit",
+        threshold=5.0,
+        radrange=0.0,
+        angle=0.0,
+        flagonlyday=False,
+        vampirisms=False,
+        avantsoleil=0.0 * units.s,
+        apresnuit=0.0 * units.s,
+        avantnuit=0.0 * units.s,
+        apresoleil=0.0 * units.s,
+        horizon=-34.0 * units.arcmin,
+        nononsoleil=True,
+        uvmin=0.0,
+        uvmax=None,
+        show=None,
+        showdir=".",
+        dryrun=True,
+        verb=False,
+    ):
         """Flag Measurement Set based on scalarly averaged data
 
         Input:
@@ -421,7 +522,7 @@ class Sunblocker:
         imsize (int)           : Size of image in pixels
         cell (float)           : Size of cell in arcsec
         mode (str)             : Flagging based on 'all' data, repeated per 'antenna', or repeated per 'baseline'
-        pol (str)              : Polarization selection, Stokes 'i', or Stokes 'q' 
+        pol (str)              : Polarization selection, Stokes 'i', or Stokes 'q'
         threshmode (str)       : Method to determine sigma, 'fit': fit Gaussian at the max to determine sigma, standard deviation otherwise
         threshold (float)      : Distance from average beyond which data are flagged in units of sigma
         radrange (float)       : Each selected point is expanded in a wedge with this radial range
@@ -433,8 +534,8 @@ class Sunblocker:
         apresoleil (float)     : Time to be evaluated after sunset in astropy units (defaults to 30 minutes)
         horizon (astropy angle): Height above horizon of the sun to define sunset in astropy units (defaults to -34 arcmin)
         nononsoleil (bool)     : Apply only on time windows around sunrise and sunset or on all day time data (if True, which is the default)
-        uvmin (float)          : Restrict analysis to visibilities with a baseline b with uvmax > b > uvmin 
-        uvmax (float)          : Restrict analysis to visibilities with a baseline b with uvmax > b > uvmin 
+        uvmin (float)          : Restrict analysis to visibilities with a baseline b with uvmax > b > uvmin
+        uvmax (float)          : Restrict analysis to visibilities with a baseline b with uvmax > b > uvmin
         flagonlyday (bool)     : Flag only data taken at "day" time, as defined by avantsoleil, apresnuit, avantnuit, apresoleil, nononsoleil
         horizon (astropy angle): Height above horizon of the sun to define sunset in astropy units (defaults to -34 arcmin)
         show (bool)            : Show histogram and cutoff line in a viewgraph
@@ -498,148 +599,207 @@ class Sunblocker:
 
         """
         if verb:
-            print('Phazer: start.')
+            print("Phazer: start.")
 
         # Open data set as table
         if verb:
-            print('Phazer: opening input files.')
+            print("Phazer: opening input files.")
 
         if inset == None:
             if verb:
-                print('Phazer: No input. Stopping.')
-                print('Phazer: exiting (successfully).')
+                print("Phazer: No input. Stopping.")
+                print("Phazer: exiting (successfully).")
 
-        if type(inset) == type(''):
+        if type(inset) == type(""):
             inset = [inset]
 
         if verb:
             if len(inset) == 1:
-                print('Phazer: reading one data set.')
+                print("Phazer: reading one data set.")
             else:
-                print('Phazer: reading {:d} data sets.'.format(len(inset)))
-
+                print("Phazer: reading {:d} data sets.".format(len(inset)))
 
         # Let's do this the primitive way, first read a data set then append everything else
         if verb:
-            print('Phazer: reading {:s}.'.format(inset[0]))
+            print("Phazer: reading {:s}.".format(inset[0]))
 
-        nrows=[0,]
+        nrows = [
+            0,
+        ]
         tutu = self.opensilent(inset[0])
-        data, flags, uv, antenna1, antenna2, antennanames = self.readdata(tutu, col = col, fields = fields, channels = channels, baselines = baselines, pol = pol, verb = verb)
+        data, flags, uv, antenna1, antenna2, antennanames = self.readdata(
+            tutu,
+            col=col,
+            fields=fields,
+            channels=channels,
+            baselines=baselines,
+            pol=pol,
+            verb=verb,
+        )
 
         #        print 'flags shape', flags.shape
         #        print 'data shape', data.shape
         #        print 'any?', np.any(flags)
-        
+
         # This is a list where all visibilities taken by night are set to True, False otherwise)
         if vampirisms or flagonlyday:
-            dayflags = self.vampirisms(tutu, dryrun = True, avantsoleil = avantsoleil, apresnuit = apresnuit, avantnuit = avantnuit, apresoleil = apresoleil, horizon = horizon, nononsoleil = nononsoleil, flinvert = True, verb = verb)
-        
+            dayflags = self.vampirisms(
+                tutu,
+                dryrun=True,
+                avantsoleil=avantsoleil,
+                apresnuit=apresnuit,
+                avantnuit=avantnuit,
+                apresoleil=apresoleil,
+                horizon=horizon,
+                nononsoleil=nononsoleil,
+                flinvert=True,
+                verb=verb,
+            )
+
         # Now additionally flag all night visibilities if user wants
         if vampirisms:
             if verb:
-                print('Phazer: applying vampirisms to dataset {:s}.'.format(inset[0]))
+                print("Phazer: applying vampirisms to dataset {:s}.".format(inset[0]))
 
-#            print'finding out about dayflags:'
-#            print np.all(dayflags)
-            flags[dayflags,:] = True
+            #            print'finding out about dayflags:'
+            #            print np.all(dayflags)
+            flags[dayflags, :] = True
             data[flags] = np.nan
 
-        tutu.close()        
+        tutu.close()
         nrows.append(data.shape[0])
 
-        for i in range(1,len(inset)):
+        for i in range(1, len(inset)):
             if verb:
-                print('Phazer: reading {:s}.'.format(inset[i]))
+                print("Phazer: reading {:s}.".format(inset[i]))
             tutu = self.opensilent(inset[i])
-            dataplus, flagsplus, uvplus, antenna1plus, antenna2plus, antennanamesplus = self.readdata(tutu, col = col, fields = fields, channels = channels, pol = pol, verb = verb)
+            (
+                dataplus,
+                flagsplus,
+                uvplus,
+                antenna1plus,
+                antenna2plus,
+                antennanamesplus,
+            ) = self.readdata(
+                tutu, col=col, fields=fields, channels=channels, pol=pol, verb=verb
+            )
             if vampirisms or flagonlyday:
-                dayflagsplus = self.vampirisms(tutu, dryrun = True, avantsoleil = avantsoleil, apresnuit = apresnuit, avantnuit = avantnuit, apresoleil = apresoleil, horizon = horizon, nononsoleil = nononsoleil, flinvert = True, verb = verb)
-            
+                dayflagsplus = self.vampirisms(
+                    tutu,
+                    dryrun=True,
+                    avantsoleil=avantsoleil,
+                    apresnuit=apresnuit,
+                    avantnuit=avantnuit,
+                    apresoleil=apresoleil,
+                    horizon=horizon,
+                    nononsoleil=nononsoleil,
+                    flinvert=True,
+                    verb=verb,
+                )
+
             if vampirisms:
                 if verb:
-                    print('Phazer: applying vampirisms to dataset {:s}.'.format(inset[i]))
+                    print(
+                        "Phazer: applying vampirisms to dataset {:s}.".format(inset[i])
+                    )
                 # This flags all visibilities taken by night (sets those visibs to True)
 
-                flagsplus[dayflagsplus,:] = True
+                flagsplus[dayflagsplus, :] = True
                 dataplus[flagsplus] = np.nan
             tutu.close()
-            
-            data     = np.concatenate((data,  dataplus ), axis = 0)
-            flags    = np.concatenate((flags, flagsplus), axis = 0)
+
+            data = np.concatenate((data, dataplus), axis=0)
+            flags = np.concatenate((flags, flagsplus), axis=0)
             if vampirisms or flagonlyday:
-                dayflags = np.concatenate((dayflags, dayflagsplus), axis = 0)
-            uv       = np.concatenate((uv,    uvplus   ), axis = 0)
-            antenna1 = np.concatenate((antenna1, antenna1plus), axis = 0)
-            antenna2 = np.concatenate((antenna2, antenna2plus), axis = 0)
+                dayflags = np.concatenate((dayflags, dayflagsplus), axis=0)
+            uv = np.concatenate((uv, uvplus), axis=0)
+            antenna1 = np.concatenate((antenna1, antenna1plus), axis=0)
+            antenna2 = np.concatenate((antenna2, antenna2plus), axis=0)
 
             # Antenna names is different. Just check if they are the same
             if np.all(antennanames == antennanamesplus):
                 pass
             else:
-                print('Phazer: !!!WARNING!!!')
-                print('Phazer: It appears that the antennas in data sets differ.')
-                print('Phazer: This means that baseline selection (using parameter baselines) should not be used.')
-                print('Phazer: This means that only model \'all\' should be used.')
-                print('')
+                print("Phazer: !!!WARNING!!!")
+                print("Phazer: It appears that the antennas in data sets differ.")
+                print(
+                    "Phazer: This means that baseline selection (using parameter baselines) should not be used."
+                )
+                print("Phazer: This means that only model 'all' should be used.")
+                print("")
             nrows.append(data.shape[0])
 
         if verb:
-            print('Phazer: gridding visibilities (vector sum) and then building')
-            print('Phazer: scalar average of amplitudes along velocity axis.')
-        duv = 1./(imsize*cell*np.pi/(3600.*180.)) # UV cell in lambda
-        u = uv[:,0]
-        v = uv[:,1]
-        
-        umin = u.min() # Minimum in u
-        vmin = v.min() # Minimum in v
-        umax = u.max() # Maximum in u
-        vmax = v.max() # Maximum in v
+            print("Phazer: gridding visibilities (vector sum) and then building")
+            print("Phazer: scalar average of amplitudes along velocity axis.")
+        duv = 1.0 / (imsize * cell * np.pi / (3600.0 * 180.0))  # UV cell in lambda
+        u = uv[:, 0]
+        v = uv[:, 1]
 
+        umin = u.min()  # Minimum in u
+        vmin = v.min()  # Minimum in v
+        umax = u.max()  # Maximum in u
+        vmax = v.max()  # Maximum in v
 
         # Now care about uvrange. Caution! This is a dead statement!!!
         # uvflags = (u*0).astype(bool)
-        
+
         if uvmax != None:
             umin = -uvmax
             umax = uvmax
             vmin = -uvmax
             vmax = uvmax
-#            uvflags = u*u+v*v > uvmax*uvmax
-        
+        #            uvflags = u*u+v*v > uvmax*uvmax
+
         # Flag everything outside uvrange
-#        uvflags += u*u+v*v < uvmin*uvmin
-#        data[uvflags,:] = np.nan
-            
+        #        uvflags += u*u+v*v < uvmin*uvmin
+        #        data[uvflags,:] = np.nan
+
         if verb:
-            print('Phazer: approximate minimum u is {0:.0f} and \nPhazer: the maximum u is {1:.0f}\nPhazer: approximate minimum v is {2:.0f} and \nPhazer: the maximum v is {3:.0f}'.format(umin,umax,vmin,vmax))
-        umin, umax = np.floor(umin), np.ceil(umax) # Make sure that all visibilities are included in grid in the next step
-        vmin, vmax = np.floor(vmin), np.ceil(vmax) # Make sure that all visibilities are included in grid in the next step
-        ugrid=np.arange(umin,umax,duv) # Notice that umax is not necessarily contained in an array like this, hence the step before
-        vgrid=np.arange(vmin,vmax,duv) # Notice that vmax is not necessarily contained in an array like this, hence the step before
+            print(
+                "Phazer: approximate minimum u is {0:.0f} and \nPhazer: the maximum u is {1:.0f}\nPhazer: approximate minimum v is {2:.0f} and \nPhazer: the maximum v is {3:.0f}".format(
+                    umin, umax, vmin, vmax
+                )
+            )
+        umin, umax = np.floor(umin), np.ceil(
+            umax
+        )  # Make sure that all visibilities are included in grid in the next step
+        vmin, vmax = np.floor(vmin), np.ceil(
+            vmax
+        )  # Make sure that all visibilities are included in grid in the next step
+        ugrid = np.arange(
+            umin, umax, duv
+        )  # Notice that umax is not necessarily contained in an array like this, hence the step before
+        vgrid = np.arange(
+            vmin, vmax, duv
+        )  # Notice that vmax is not necessarily contained in an array like this, hence the step before
 
         # Check if all uv coordinates are somewhere in the grid
-        #print umin, ugrid[0], umax, ugrid[-1]
-        #print vmin, vgrid[0], vmax, vgrid[-1]
+        # print umin, ugrid[0], umax, ugrid[-1]
+        # print vmin, vgrid[0], vmax, vgrid[-1]
 
         # Griddedvis are for the viewgraph
         if show != None:
-            griddedvis = np.zeros((ugrid.size, vgrid.size),dtype=float)
+            griddedvis = np.zeros((ugrid.size, vgrid.size), dtype=float)
 
         # For the sake of efficiency create an array that replaces data
-#        nmdata = np.ones(data[:,0].size, dtype = float)
+        #        nmdata = np.ones(data[:,0].size, dtype = float)
 
-        nmdata = np.zeros(data[:,0].size, dtype = float)
+        nmdata = np.zeros(data[:, 0].size, dtype=float)
 
         # Keeping track of central uv coordinates, required for histogram later on
-        gruvcoord = np.append(np.copy(nmdata),np.copy(nmdata)).reshape((2,nmdata.shape[0])).transpose()
+        gruvcoord = (
+            np.append(np.copy(nmdata), np.copy(nmdata))
+            .reshape((2, nmdata.shape[0]))
+            .transpose()
+        )
         # Caution!!! The following would not create an independent copy but is equivalent to grucoord = nmdata. This also works for sub-arrays.
         # grucoord = nmdata[:]
 
         ### The following three lines belong to test 1
-        #testdata = np.zeros(data[:,0].size, dtype = bool)
-        #print 'Is any value of the boolean array testdata True (should be False)?'
-        #print np.any(testdata)
+        # testdata = np.zeros(data[:,0].size, dtype = bool)
+        # print 'Is any value of the boolean array testdata True (should be False)?'
+        # print np.any(testdata)
         ###
 
         ### The following line belongs to test 3: plot gridded visibs
@@ -649,59 +809,88 @@ class Sunblocker:
         collaflags = np.all(flags, axis=1)
         for uu in ugrid:
             for vv in vgrid:
-#                active_visibs = (u > uu)*(u <= (uu+duv))*(v > vv)*(v <= (vv+duv))
+                #                active_visibs = (u > uu)*(u <= (uu+duv))*(v > vv)*(v <= (vv+duv))
                 if uvmax == None:
-                    active_visibs = (u > uu)*(u <= (uu+duv))*(v > vv)*(v <= (vv+duv))*(u*u+v*v>uvmin*uvmin)
+                    active_visibs = (
+                        (u > uu)
+                        * (u <= (uu + duv))
+                        * (v > vv)
+                        * (v <= (vv + duv))
+                        * (u * u + v * v > uvmin * uvmin)
+                    )
                 else:
-                    active_visibs = (u > uu)*(u <= (uu+duv))*(v > vv)*(v <= (vv+duv))*(u*u+v*v<uvmax*uvmax)*(u*u+v*v>uvmin*uvmin)
+                    active_visibs = (
+                        (u > uu)
+                        * (u <= (uu + duv))
+                        * (v > vv)
+                        * (v <= (vv + duv))
+                        * (u * u + v * v < uvmax * uvmax)
+                        * (u * u + v * v > uvmin * uvmin)
+                    )
 
                 active_visibs[collaflags] = False
                 if np.any(active_visibs):
-
-                    #gruvcoord[active_visibs,:] = uu, vv # Central pixel coordinate
+                    # gruvcoord[active_visibs,:] = uu, vv # Central pixel coordinate
                     # Central pixel becomes important when doing wedges
-                    gruvcoord[active_visibs,:] = uu+duv/2., vv+duv/2. # Central pixel coordinate
+                    gruvcoord[active_visibs, :] = (
+                        uu + duv / 2.0,
+                        vv + duv / 2.0,
+                    )  # Central pixel coordinate
 
                     ### The following line belongs to test 1
-                    #testdata[active_visibs] = True
+                    # testdata[active_visibs] = True
                     ###
-                    scav = np.nanmean(np.abs(np.nansum(data[active_visibs],axis=0))) # Scalar average of amplitude of vectorial sum of visibilities in cell
-                    nmdata[active_visibs] = scav # set all visibilities in that cell to same cell value
+                    scav = np.nanmean(
+                        np.abs(np.nansum(data[active_visibs], axis=0))
+                    )  # Scalar average of amplitude of vectorial sum of visibilities in cell
+                    nmdata[
+                        active_visibs
+                    ] = scav  # set all visibilities in that cell to same cell value
                     ### The following 4 lines belong to test 3: plot gridded visibs
-                    #if k > 100:
+                    # if k > 100:
                     #    print 'Please find and confirm pixel coordinates and values in the greyscale plot: u: %f v: %f value: %f' % (uu+duv/2, vv+duv/2, scav)
                     #    k = 0
-                    #k = k+1
+                    # k = k+1
                     ###
 
                     if show != None:
-                        griddedvis[ugrid == uu, vgrid == vv] = scav # For plotting
+                        griddedvis[ugrid == uu, vgrid == vv] = scav  # For plotting
 
         # This is the scalar average in frequency
         data = nmdata
 
         ### The following two lines belong to test 2
-        #print '3: shape'
-        #print data.shape
+        # print '3: shape'
+        # print data.shape
         ###
 
         ### The following 6 lines belong to test 1
-        #print 'Have all visibilities been addressed?'
-        #print np.all(testdata)
-        #x = (gruvcoord == 0.)
-        #print 'Has any visibility been assigned a cell coordinate of 0 (Possible but unlikely)?'
-        #print np.any(x)
-        #sys.exit()
+        # print 'Have all visibilities been addressed?'
+        # print np.all(testdata)
+        # x = (gruvcoord == 0.)
+        # print 'Has any visibility been assigned a cell coordinate of 0 (Possible but unlikely)?'
+        # print np.any(x)
+        # sys.exit()
         ###
 
         if show != None:
             if verb:
-                print('Phazer: Plotting gridded scalar average of amplitudes along velocity axis.')
-            plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.nanmin(griddedvis),vmax=np.nanmax(griddedvis),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
-            plt.xlabel('u')
-            plt.ylabel('v')
-            if isinstance(show, type('')):
-                savefile = os.path.join(showdir, 'griddedvis_'+show)
+                print(
+                    "Phazer: Plotting gridded scalar average of amplitudes along velocity axis."
+                )
+            plt.imshow(
+                np.flip(griddedvis, axis=0).transpose(),
+                vmin=np.nanmin(griddedvis),
+                vmax=np.nanmax(griddedvis),
+                cmap="Greys",
+                origin=("lower"),
+                interpolation="nearest",
+                extent=[ugrid.max() + duv, ugrid.min(), vgrid.min(), vgrid.max() + duv],
+            )
+            plt.xlabel("u")
+            plt.ylabel("v")
+            if isinstance(show, type("")):
+                savefile = os.path.join(showdir, "griddedvis_" + show)
                 plt.savefig(savefile)
                 plt.close()
             else:
@@ -710,52 +899,75 @@ class Sunblocker:
 
         # Now build the mask, depending on the mode
         if verb:
-            print('Phazer: clipping data based on scalar averaging')
+            print("Phazer: clipping data based on scalar averaging")
 
         # The flags are in the data (using nan operations), so we can neglect them here.
-        flags = np.zeros(data.shape, dtype = bool)
+        flags = np.zeros(data.shape, dtype=bool)
         if flagonlyday:
             unflags = dayflags
         else:
             unflags = None
-        
-        if mode == 'all':
+
+        if mode == "all":
             if verb:
-                print('Phazer: mode \'all\', filtering all data at once.')
+                print("Phazer: mode 'all', filtering all data at once.")
             if show == None:
                 ax = None
             else:
-                ax = plt.subplot(1,1,1)
-            newflags = self.histoclip(data, flags, gruvcoord, unflags = unflags, threshmode = threshmode, threshold = threshold, ax = ax, verb = verb)
+                ax = plt.subplot(1, 1, 1)
+            newflags = self.histoclip(
+                data,
+                flags,
+                gruvcoord,
+                unflags=unflags,
+                threshmode=threshmode,
+                threshold=threshold,
+                ax=ax,
+                verb=verb,
+            )
         else:
-            newflags = np.zeros(data.shape, dtype = bool)
+            newflags = np.zeros(data.shape, dtype=bool)
             antennas = np.unique(np.append(antenna1, antenna2))
-            if mode == 'antenna':
+            if mode == "antenna":
                 if verb:
-                    print('Phazer, mode \'antenna\', filtering data per antenna.')
+                    print("Phazer, mode 'antenna', filtering data per antenna.")
                 if show != None:
                     nplotsx = int(np.ceil(np.sqrt(antennas.size)))
                     i = 0
                 for antenna in antennas:
                     if verb:
-                        print('Phazer: filtering antenna {0:d}: {1:s}'.format(antenna, t.ANTENNA.getcol('NAME')[antenna]))
-                    passedflags = np.zeros(data.shape,dtype = bool)
-                    select  = antenna1 != antenna
+                        print(
+                            "Phazer: filtering antenna {0:d}: {1:s}".format(
+                                antenna, t.ANTENNA.getcol("NAME")[antenna]
+                            )
+                        )
+                    passedflags = np.zeros(data.shape, dtype=bool)
+                    select = antenna1 != antenna
                     select &= antenna2 != antenna
-                    passedflags[select,:] |= True
+                    passedflags[select, :] |= True
                     if show != None:
-                        title = 'Ant '+antennanames[antenna]
-                        ax = plt.subplot(nplotsx,nplotsx, i)
+                        title = "Ant " + antennanames[antenna]
+                        ax = plt.subplot(nplotsx, nplotsx, i)
                     else:
                         ax = None
-                    newflags |= self.histoclip(data, passedflags, gruvcoord, unflags = unflags, threshmode = threshmode, threshold = threshold, ax = ax, title = title, verb = verb)
+                    newflags |= self.histoclip(
+                        data,
+                        passedflags,
+                        gruvcoord,
+                        unflags=unflags,
+                        threshmode=threshmode,
+                        threshold=threshold,
+                        ax=ax,
+                        title=title,
+                        verb=verb,
+                    )
                     i = i + 1
             else:
                 if verb:
-                    print('Phazer: mode \'baseline\', filtering data per antenna.')
+                    print("Phazer: mode 'baseline', filtering data per antenna.")
                 antennas1 = np.unique(antenna1)
                 antennas2 = np.unique(antenna2)
-                pairs = np.unique(np.column_stack((antenna1,antenna2)))
+                pairs = np.unique(np.column_stack((antenna1, antenna2)))
                 # Let's guess this
                 if show != None:
                     nplotsx = int(np.ceil(np.sqrt(pairs.size)))
@@ -763,21 +975,44 @@ class Sunblocker:
                 for pair in pairs:
                     if pair[0] != pair[1]:
                         if verb:
-                            print('Filtering baseline between antenna {0:d}: {1:s} and {2:d}: {3:s}'.format(pair[0], antennanames[pair[0]], pair[1], antennanames[pair[1]]))
-                        passedflags = np.zeros(data.shape,dtype = bool)
+                            print(
+                                "Filtering baseline between antenna {0:d}: {1:s} and {2:d}: {3:s}".format(
+                                    pair[0],
+                                    antennanames[pair[0]],
+                                    pair[1],
+                                    antennanames[pair[1]],
+                                )
+                            )
+                        passedflags = np.zeros(data.shape, dtype=bool)
                         select = antenna1 != pair[0]
                         select &= antenna2 != pair[1]
-                        passedflags[select,:] |= True
+                        passedflags[select, :] |= True
                         if show != None:
-                            title = 'Pair '+antennanames[pair[0]]+','+antennanames[pair[1]]
-                            ax = plt.subplot(nplotsx,nplotsy,i)
+                            title = (
+                                "Pair "
+                                + antennanames[pair[0]]
+                                + ","
+                                + antennanames[pair[1]]
+                            )
+                            ax = plt.subplot(nplotsx, nplotsy, i)
                         else:
                             ax = None
-                        newflags |= self.histoclip(data, passedflags, grucoord, grvcoord, unflags=unflags, threshmode = threshmode, threshold = threshold, ax = ax, title = title, verb = verb)
-                    i = i+1
+                        newflags |= self.histoclip(
+                            data,
+                            passedflags,
+                            grucoord,
+                            grvcoord,
+                            unflags=unflags,
+                            threshmode=threshmode,
+                            threshold=threshold,
+                            ax=ax,
+                            title=title,
+                            verb=verb,
+                        )
+                    i = i + 1
         if show != None:
-            if isinstance(show, type('')):
-                plt.savefig(showdir+'/'+'histo_'+show)
+            if isinstance(show, type("")):
+                plt.savefig(showdir + "/" + "histo_" + show)
                 plt.close()
             else:
                 plt.show()
@@ -787,83 +1022,111 @@ class Sunblocker:
             patches = []
 
         # Extend the new flags, first make a copy of the flags
-        if radrange > 0. and angle > 0.:
+        if radrange > 0.0 and angle > 0.0:
             if verb:
-                print('Phazer: extending flags to nearby pixels in the uv-plane using radrange: {0:.0f} and angle: {1:.0f}'.format(radrange, angle))
-            flaggeduv = uv[np.column_stack((newflags,newflags))]
-            flaggeduv = flaggeduv.reshape(flaggeduv.size//2, 2)
+                print(
+                    "Phazer: extending flags to nearby pixels in the uv-plane using radrange: {0:.0f} and angle: {1:.0f}".format(
+                        radrange, angle
+                    )
+                )
+            flaggeduv = uv[np.column_stack((newflags, newflags))]
+            flaggeduv = flaggeduv.reshape(flaggeduv.size // 2, 2)
             befflaggeduv = flaggeduv.copy()
 
             if verb:
-                print('Phazer: processing {:d} points.'.format(flaggeduv.size//2))
-            for i in range(flaggeduv.size//2):
-                if i%500 == 0:
-                    print('Phazer: extended {:d} points.'.format(i))
-                thepath = self.wedge_around_centre(flaggeduv[i,:], radrange, angle)
+                print("Phazer: processing {:d} points.".format(flaggeduv.size // 2))
+            for i in range(flaggeduv.size // 2):
+                if i % 500 == 0:
+                    print("Phazer: extended {:d} points.".format(i))
+                thepath = self.wedge_around_centre(flaggeduv[i, :], radrange, angle)
                 if flagonlyday:
-                    newflags[self.selwith_path(thepath, uv)*unflags] = True
+                    newflags[self.selwith_path(thepath, uv) * unflags] = True
                 else:
                     newflags[self.selwith_path(thepath, uv)] = True
                 if show != None:
-                    patches.append(PathPatch(thepath, facecolor='orange', lw=0, alpha = 0.1))
+                    patches.append(
+                        PathPatch(thepath, facecolor="orange", lw=0, alpha=0.1)
+                    )
 
         # Plot data and flags
         if show != None:
             if verb:
-                print('Phazer: plotting flagged data positions onto gridded and averaged visibilities.')
-            #ax = plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.nanmin(griddedvis),vmax=np.nanmax(griddedvis),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
+                print(
+                    "Phazer: plotting flagged data positions onto gridded and averaged visibilities."
+                )
+            # ax = plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.nanmin(griddedvis),vmax=np.nanmax(griddedvis),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
             average = np.nanmean(griddedvis)
-            stdev  = np.nanstd(griddedvis)
-            ax = plt.subplot(1,1,1)
-            #plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.maximum(np.nanmin(griddedvis),average-threshold*stdev),vmax=np.minimum(np.nanmax(griddedvis),average+threshold*stdev),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
-            #plt.xlabel('u')
-            #plt.ylabel('v')
-            ax.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.maximum(np.nanmin(griddedvis),average-threshold*stdev),vmax=np.minimum(np.nanmax(griddedvis),average+threshold*stdev),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
-            ax.set_xlabel('u')
-            ax.set_ylabel('v')
+            stdev = np.nanstd(griddedvis)
+            ax = plt.subplot(1, 1, 1)
+            # plt.imshow(np.flip(griddedvis,axis=0).transpose(),vmin=np.maximum(np.nanmin(griddedvis),average-threshold*stdev),vmax=np.minimum(np.nanmax(griddedvis),average+threshold*stdev),cmap='Greys', origin=('lower'),interpolation='nearest', extent = [ugrid.max()+duv, ugrid.min(), vgrid.min(), vgrid.max()+duv])
+            # plt.xlabel('u')
+            # plt.ylabel('v')
+            ax.imshow(
+                np.flip(griddedvis, axis=0).transpose(),
+                vmin=np.maximum(np.nanmin(griddedvis), average - threshold * stdev),
+                vmax=np.minimum(np.nanmax(griddedvis), average + threshold * stdev),
+                cmap="Greys",
+                origin=("lower"),
+                interpolation="nearest",
+                extent=[ugrid.max() + duv, ugrid.min(), vgrid.min(), vgrid.max() + duv],
+            )
+            ax.set_xlabel("u")
+            ax.set_ylabel("v")
             for patch in patches:
                 ax.add_patch(patch)
-            flaggeduv = uv[np.column_stack((newflags,newflags))]
-            flaggeduv = flaggeduv.reshape(flaggeduv.size//2, 2)
-#            print uv[:,0].shape
-#            print newflags.shape
-            selc = np.logical_not(newflags)*(uv[:,0] <= umax)*(uv[:,1] <= vmax)*(uv[:,0] >= umin)*(uv[:,1] >= vmin)
-            notflaggeduv = uv[np.column_stack((selc,selc))]
-            notflaggeduv = notflaggeduv.reshape(notflaggeduv.size//2, 2)
+            flaggeduv = uv[np.column_stack((newflags, newflags))]
+            flaggeduv = flaggeduv.reshape(flaggeduv.size // 2, 2)
+            #            print uv[:,0].shape
+            #            print newflags.shape
+            selc = (
+                np.logical_not(newflags)
+                * (uv[:, 0] <= umax)
+                * (uv[:, 1] <= vmax)
+                * (uv[:, 0] >= umin)
+                * (uv[:, 1] >= vmin)
+            )
+            notflaggeduv = uv[np.column_stack((selc, selc))]
+            notflaggeduv = notflaggeduv.reshape(notflaggeduv.size // 2, 2)
             # Restrict uvrange to maximum of uvmax and befflaggeduv
             ####
-            
-            ax.plot(notflaggeduv[:,0], notflaggeduv[:,1], '.b', markersize = 0.3)
-            ax.plot(flaggeduv[:,0], flaggeduv[:,1], '.r', markersize = 0.3)
-            if radrange > 0. and angle > 0.:
-                ax.plot(befflaggeduv[:,0], befflaggeduv[:,1], '.g', markersize = 0.3)
-            if isinstance(show, type('')):
-                plt.savefig(showdir+'/'+'select_'+show)
+
+            ax.plot(notflaggeduv[:, 0], notflaggeduv[:, 1], ".b", markersize=0.3)
+            ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3)
+            if radrange > 0.0 and angle > 0.0:
+                ax.plot(befflaggeduv[:, 0], befflaggeduv[:, 1], ".g", markersize=0.3)
+            if isinstance(show, type("")):
+                plt.savefig(showdir + "/" + "select_" + show)
                 plt.close()
             else:
                 plt.show()
                 plt.close()
 
-        if isinstance(outset, type('')):
+        if isinstance(outset, type("")):
             outset = [outset]
 
         if outset == None:
             outset = inset
         else:
             if len(outset) != len(inset):
-                raise('Phazer: number of outsets is not equal to number of insets, cowardly stopping application of flags.')
+                raise (
+                    "Phazer: number of outsets is not equal to number of insets, cowardly stopping application of flags."
+                )
 
         for i in range(len(outset)):
             if tables.tableexists(outset[i]):
                 if verb:
-                    print('Phazer: opening data set {:s}'.format(outset[i]))
+                    print("Phazer: opening data set {:s}".format(outset[i]))
                 if not dryrun:
                     tout = self.opensilent(outset[i], readonly=False)
                 else:
-                    print('Phazer: it\'s a simulation (dry run)')
+                    print("Phazer: it's a simulation (dry run)")
             else:
                 if verb:
-                    print('Phazer: data set {0:s} does not exist. Copying it from data set {1:s}'.format(outset[i], inset[i]))
+                    print(
+                        "Phazer: data set {0:s} does not exist. Copying it from data set {1:s}".format(
+                            outset[i], inset[i]
+                        )
+                    )
                 if not dryrun:
                     t = self.opensilent(inset[i])
                     tout = t.copy(outset[i])
@@ -872,36 +1135,51 @@ class Sunblocker:
                     tout = self.opensilent(outset[i], readonly=False)
                 else:
                     if verb:
-                        print('Phazer: it\'s a simulation (dry run)')
+                        print("Phazer: it's a simulation (dry run)")
 
             # Now apply newflags to the data
             if verb:
-                print('Phazer: applying new flags.')
+                print("Phazer: applying new flags.")
             if not dryrun:
-                flags =  tout.getcol('FLAG')
-                flags[newflags[nrows[i]:nrows[i+1]],:,:] = True
+                flags = tout.getcol("FLAG")
+                flags[newflags[nrows[i] : nrows[i + 1]], :, :] = True
             else:
                 if verb:
-                    print('Phazer: it\'s a simulation (dry run)')
+                    print("Phazer: it's a simulation (dry run)")
 
             if verb:
-                print('Phazer: writing flags.')
+                print("Phazer: writing flags.")
             if not dryrun:
-                tout.putcol('FLAG', flags)
+                tout.putcol("FLAG", flags)
                 tout.close()
             else:
                 if verb:
-                    print('Phazer: it\'s a simulation (dry run).')
+                    print("Phazer: it's a simulation (dry run).")
         if verb:
-            print('Phazer: exiting (successfully).')
+            print("Phazer: exiting (successfully).")
         return
 
     def astropy_to_pyephemtime(self, astropytime):
-        return astropytime.mjd-15019.5
+        return astropytime.mjd - 15019.5
 
-    def vampirisms(self, inset, lat = None, lon = None, hei = None, dryrun = True, avantsoleil = 0.*units.s, apresnuit = 0.*units.s, avantnuit = 0.*units.s, apresoleil = 0.*units.s, horizon = -34.*units.arcmin, nononsoleil = True, flinvert = False, verb = False):
+    def vampirisms(
+        self,
+        inset,
+        lat=None,
+        lon=None,
+        hei=None,
+        dryrun=True,
+        avantsoleil=0.0 * units.s,
+        apresnuit=0.0 * units.s,
+        avantnuit=0.0 * units.s,
+        apresoleil=0.0 * units.s,
+        horizon=-34.0 * units.arcmin,
+        nononsoleil=True,
+        flinvert=False,
+        verb=False,
+    ):
         """Identifies times in a data set where sun is up or down and provides flags
-        
+
         Input:
         inset (str)            : Input data set or already open pyrap file handle
         lon (astropy angle)    : Longitude of observatory in astropy units (defaults to what is found in the data set)
@@ -938,57 +1216,76 @@ class Sunblocker:
 
         """
 
-        print('Vampirisms: start.')
+        print("Vampirisms: start.")
 
         if verb:
             if dryrun:
-                print('Vampirisms: this is a dry run. Flags will not be applied.')
-                drypre = 'Because of dry run not'
+                print("Vampirisms: this is a dry run. Flags will not be applied.")
+                drypre = "Because of dry run not"
             else:
-                drypre = ''
-            if avantsoleil != 0.:
-                print('Vampirisms: {0:s} flagging starts {1:s} before sunrise.'.format(drypre, avantsoleil))
+                drypre = ""
+            if avantsoleil != 0.0:
+                print(
+                    "Vampirisms: {0:s} flagging starts {1:s} before sunrise.".format(
+                        drypre, avantsoleil
+                    )
+                )
             else:
-                print('Vampirisms: {0:s} flagging starts at sunrise'.format(drypre))
+                print("Vampirisms: {0:s} flagging starts at sunrise".format(drypre))
             if not nononsoleil:
-                if apresnuit != 0.:
-                    print('Vampirisms: {0:s} flagging ends {1:s} after sunrise.'.format(drypre, apresnuit))
+                if apresnuit != 0.0:
+                    print(
+                        "Vampirisms: {0:s} flagging ends {1:s} after sunrise.".format(
+                            drypre, apresnuit
+                        )
+                    )
                 else:
-                    print('Vampirisms: {:s} flagging ends at sunrise'.format(drypre))
-                if avantnuit != 0.:
-                    print('Vampirisms: {0:s} flagging starts {1:s} before sunset.'.format(drypre, avantnuit))
-            if apresoleil != 0.:
-                print('Vampirisms: {0:s} flagging ends {1:s} after sunset.'.format(drypre, apresoleil))
+                    print("Vampirisms: {:s} flagging ends at sunrise".format(drypre))
+                if avantnuit != 0.0:
+                    print(
+                        "Vampirisms: {0:s} flagging starts {1:s} before sunset.".format(
+                            drypre, avantnuit
+                        )
+                    )
+            if apresoleil != 0.0:
+                print(
+                    "Vampirisms: {0:s} flagging ends {1:s} after sunset.".format(
+                        drypre, apresoleil
+                    )
+                )
             else:
-                print('Vampirisms: {0:s} flagging ends at sunset'.format(drypre))
+                print("Vampirisms: {0:s} flagging ends at sunset".format(drypre))
 
-            if horizon != 0.:
-                print('Vampirisms: we think that the sun has really set (oh how I hate it!) when its centre is {:s} below the horizon'.format(-horizon))
+            if horizon != 0.0:
+                print(
+                    "Vampirisms: we think that the sun has really set (oh how I hate it!) when its centre is {:s} below the horizon".format(
+                        -horizon
+                    )
+                )
 
-                
         # We really don't want to hear about this
         if verb:
-            if isinstance(inset, type('')):
-                print('Vampirisms: opening visibility file {:s}.'.format(inset))
+            if isinstance(inset, type("")):
+                print("Vampirisms: opening visibility file {:s}.".format(inset))
             else:
-                print('Vampirisms: opening visibility file {:s}.'.format(inset.name()))
+                print("Vampirisms: opening visibility file {:s}.".format(inset.name()))
 
         # This is either a string or a data set, it will return the right thing
         if dryrun:
-            t = self.opensilent(inset = inset)
+            t = self.opensilent(inset=inset)
         else:
-            t= self.opensilent(inset = inset, readonly = False)
+            t = self.opensilent(inset=inset, readonly=False)
 
-        antennapos = t.ANTENNA.getcol('POSITION')
-        telgeo = np.average(antennapos, axis = 0)*units.meter
+        antennapos = t.ANTENNA.getcol("POSITION")
+        telgeo = np.average(antennapos, axis=0) * units.meter
 
         # In theory the units could be different, but they aren't
         telunit = t.ANTENNA.POSITION.QuantumUnits
         for i in telunit:
-            if i != 'm':
-                raise('Vampirisms: Unknown unit in visibility file.')
-        telpos = coordinates.EarthLocation(x = telgeo[0], y = telgeo[1], z = telgeo[2])
-        lone = telpos.geodetic.lon 
+            if i != "m":
+                raise ("Vampirisms: Unknown unit in visibility file.")
+        telpos = coordinates.EarthLocation(x=telgeo[0], y=telgeo[1], z=telgeo[2])
+        lone = telpos.geodetic.lon
         if lon != None:
             lone = lon
         late = telpos.geodetic.lat
@@ -996,30 +1293,35 @@ class Sunblocker:
             late = lat
         heie = telpos.geodetic.height
         if hei != None:
-            heie  = hei
-        telpos = coordinates.EarthLocation(lon = lone, lat = late, height = heie)
+            heie = hei
+        telpos = coordinates.EarthLocation(lon=lone, lat=late, height=heie)
 
-        print('It appears that the observatory latitude is {0:s}, the longitude {1:s}, and the height {2:s}'.format(telpos.geodetic.lon, telpos.geodetic.lat, telpos.geodetic.height))
+        print(
+            "It appears that the observatory latitude is {0:s}, the longitude {1:s}, and the height {2:s}".format(
+                telpos.geodetic.lon, telpos.geodetic.lat, telpos.geodetic.height
+            )
+        )
 
         # Read time stamps
         if verb:
-            print('Vampirisms: reading time stamps.')
-        dd = t.getcol('TIME')/(24.*3600.)
-        times = time.Time(dd, format='mjd', scale='utc')
-        mindd = np.amin(dd)-t.getcol('INTERVAL')[0]/(2.*24.*3600.)
-        obstart = time.Time(mindd, format='mjd', scale='utc')
-        #obstart = np.amin(times)
+            print("Vampirisms: reading time stamps.")
+        dd = t.getcol("TIME") / (24.0 * 3600.0)
+        times = time.Time(dd, format="mjd", scale="utc")
+        mindd = np.amin(dd) - t.getcol("INTERVAL")[0] / (2.0 * 24.0 * 3600.0)
+        obstart = time.Time(mindd, format="mjd", scale="utc")
+        # obstart = np.amin(times)
         eobstart = ephem.Date(self.astropy_to_pyephemtime(obstart))
-        maxdd = np.amax(dd)+t.getcol('INTERVAL')[-1]/(2.*24.*3600.)
-        obsend = time.Time(maxdd, format='mjd', scale='utc')
-        #obsend = np.amax(times)
+        maxdd = np.amax(dd) + t.getcol("INTERVAL")[-1] / (2.0 * 24.0 * 3600.0)
+        obsend = time.Time(maxdd, format="mjd", scale="utc")
+        # obsend = np.amax(times)
         eobsend = ephem.Date(self.astropy_to_pyephemtime(obsend))
         if verb:
-            print('Vampirisms: the observation started at {:s} (UTC)'.format(obstart.iso))
-            print('Vampirisms: the observation ended at {:s} (UTC)'.format(obsend.iso))
+            print(
+                "Vampirisms: the observation started at {:s} (UTC)".format(obstart.iso)
+            )
+            print("Vampirisms: the observation ended at {:s} (UTC)".format(obsend.iso))
 
         etimes = self.astropy_to_pyephemtime(times)
-        
 
         # Pyephem stuff
         etel = ephem.Observer()
@@ -1037,105 +1339,173 @@ class Sunblocker:
         eeti = etel.next_setting(esun)
 
         ncross = 0
-        
+
         if esti > eeti:
             # From here on, esti is the start of a daylight period during the observation and eeti the end of it
             esti = eobstart
             if verb:
-                print('Vampirisms: at the beginning of the observation the sun (urgh!) was above the horizon. Not a good time.')
+                print(
+                    "Vampirisms: at the beginning of the observation the sun (urgh!) was above the horizon. Not a good time."
+                )
         else:
             if verb:
-                print('Vampirisms: at the beginning of the observation the sun (baah!) was b-lo the horizon. This is our time! Hoahahaha! Ha!')
+                print(
+                    "Vampirisms: at the beginning of the observation the sun (baah!) was b-lo the horizon. This is our time! Hoahahaha! Ha!"
+                )
             esti = etel.next_rising(esun)
             if esti < eobsend:
                 ncross += 1
                 if verb:
-                    print('Vampirisms: the sun (yuck!) rose at {:s} (UTC)'.format(esti.datetime().strftime('%Y-%m-%d, %H:%M:%S')))
+                    print(
+                        "Vampirisms: the sun (yuck!) rose at {:s} (UTC)".format(
+                            esti.datetime().strftime("%Y-%m-%d, %H:%M:%S")
+                        )
+                    )
 
-        flags = np.zeros(dd.size, dtype = bool)
-        
-        while (esti-float(avantsoleil.to(units.d).value)) < eobsend:
-            etel.date = esti       
+        flags = np.zeros(dd.size, dtype=bool)
+
+        while (esti - float(avantsoleil.to(units.d).value)) < eobsend:
+            etel.date = esti
             eeti = etel.next_setting(esun)
-       
+
             if eeti < eobsend:
                 ncross += 1
                 if verb:
-                   print('Vampirisms: the sun (hrgh!) set at {:s} (UTC), time to rise, Ha! HA, HAHA!'.format(eeti.datetime().strftime('%Y-%m-%d, %H:%M:%S')))
+                    print(
+                        "Vampirisms: the sun (hrgh!) set at {:s} (UTC), time to rise, Ha! HA, HAHA!".format(
+                            eeti.datetime().strftime("%Y-%m-%d, %H:%M:%S")
+                        )
+                    )
 
-            if nononsoleil:                
+            if nononsoleil:
                 # Only one bracket, add times
-                estiapp = float(esti)-float(avantsoleil.to(units.d).value)
-                eetiapp = float(eeti)+float(apresoleil.to(units.d).value)
+                estiapp = float(esti) - float(avantsoleil.to(units.d).value)
+                eetiapp = float(eeti) + float(apresoleil.to(units.d).value)
                 if verb:
                     estihad = max(estiapp, eobstart)
                     eetihad = min(eetiapp, eobsend)
-                    print('Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC).'.format(drypre, ephem.Date(estihad).datetime().strftime('%Y-%m-%d, %H:%M:%S'), ephem.Date(eetihad).datetime().strftime('%Y-%m-%d, %H:%M:%S')))
-                flags = flags+(etimes >= float(estiapp)) * (float(eetiapp) >= etimes)
+                    print(
+                        "Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC).".format(
+                            drypre,
+                            ephem.Date(estihad)
+                            .datetime()
+                            .strftime("%Y-%m-%d, %H:%M:%S"),
+                            ephem.Date(eetihad)
+                            .datetime()
+                            .strftime("%Y-%m-%d, %H:%M:%S"),
+                        )
+                    )
+                flags = flags + (etimes >= float(estiapp)) * (float(eetiapp) >= etimes)
             else:
                 # Two brackets, add times
-                estiapp = float(esti)-float(avantsoleil.to(units.d).value)
-                eetiapp = float(esti)+float(apresnuit.to(units.d).value)
-                estiapp2 = float(eeti)-float(avantnuit.to(units.d).value)
-                eetiapp2 = float(eeti)+float(apresoleil.to(units.d).value)
+                estiapp = float(esti) - float(avantsoleil.to(units.d).value)
+                eetiapp = float(esti) + float(apresnuit.to(units.d).value)
+                estiapp2 = float(eeti) - float(avantnuit.to(units.d).value)
+                eetiapp2 = float(eeti) + float(apresoleil.to(units.d).value)
                 if verb:
                     estihad = max(estiapp, eobstart)
                     eetihad = min(eetiapp2, eobsend)
-                    print('Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC) and'.format(drypre, ephem.Date(estihad).datetime().strftime('%Y-%m-%d, %H:%M:%S'), ephem.Date(eetiapp).datetime().strftime('%Y-%m-%d, %H:%M:%S')))
+                    print(
+                        "Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC) and".format(
+                            drypre,
+                            ephem.Date(estihad)
+                            .datetime()
+                            .strftime("%Y-%m-%d, %H:%M:%S"),
+                            ephem.Date(eetiapp)
+                            .datetime()
+                            .strftime("%Y-%m-%d, %H:%M:%S"),
+                        )
+                    )
                     if estiapp2 < eobsend:
-                        print('Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC).'.format(drypre, ephem.Date(estiapp2).datetime().strftime('%Y-%m-%d, %H:%M:%S'), ephem.Date(eetihad).datetime().strftime('%Y-%m-%d, %H:%M:%S')))
-                flags = flags+(etimes >= float(estiapp)) * (float(eetiapp) >= etimes)
-                flags = flags+(etimes >= float(estiapp2)) * (float(eetiapp2) >= etimes)
+                        print(
+                            "Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC).".format(
+                                drypre,
+                                ephem.Date(estiapp2)
+                                .datetime()
+                                .strftime("%Y-%m-%d, %H:%M:%S"),
+                                ephem.Date(eetihad)
+                                .datetime()
+                                .strftime("%Y-%m-%d, %H:%M:%S"),
+                            )
+                        )
+                flags = flags + (etimes >= float(estiapp)) * (float(eetiapp) >= etimes)
+                flags = flags + (etimes >= float(estiapp2)) * (
+                    float(eetiapp2) >= etimes
+                )
 
             # Get next sunrise by setting the current time to the current sunset and requesting next sunrise
-            etel.date = eeti       
+            etel.date = eeti
             esti = etel.next_rising(esun)
             if esti < eobsend:
                 ncross += 1
                 if verb:
-                    print('Vampirisms: the sun (aargh!) rose at {:s}'.format(esti.datetime().strftime('%Y-%m-%d, %H:%M:%S')))
+                    print(
+                        "Vampirisms: the sun (aargh!) rose at {:s}".format(
+                            esti.datetime().strftime("%Y-%m-%d, %H:%M:%S")
+                        )
+                    )
 
         if verb:
-            addendum  = ''
+            addendum = ""
             if ncross > 1:
-                print('Vampirisms: the sun crossed the horizon {:d} times during the observation'.format(ncross))
+                print(
+                    "Vampirisms: the sun crossed the horizon {:d} times during the observation".format(
+                        ncross
+                    )
+                )
             else:
                 if ncross > 0:
-                    print('Vampirisms: the sun (yargl!) crossed the horizon once during the observation')
+                    print(
+                        "Vampirisms: the sun (yargl!) crossed the horizon once during the observation"
+                    )
                 else:
-                    print('Vampirisms: the sun (woe!) never crossed the horizon during the observation')
-                    addendum = 'still '
-                    
-                    
+                    print(
+                        "Vampirisms: the sun (woe!) never crossed the horizon during the observation"
+                    )
+                    addendum = "still "
+
             if esti > eeti:
-                print('Vampirisms: at the end of the observation the sun (Uuuh!) was {:s} up.'.format(addendum))
+                print(
+                    "Vampirisms: at the end of the observation the sun (Uuuh!) was {:s} up.".format(
+                        addendum
+                    )
+                )
             else:
-                print('Vampirisms: at the end of the observation it was {:s} a beautiful night.'.format(addendum))
-                
+                print(
+                    "Vampirisms: at the end of the observation it was {:s} a beautiful night.".format(
+                        addendum
+                    )
+                )
+
         # Invert flags
         if flinvert:
             if verb:
-                print('Vampirisms: inverting flags, that means {:s} flag everything in the night (terrible)!'.format(drypre))
+                print(
+                    "Vampirisms: inverting flags, that means {:s} flag everything in the night (terrible)!".format(
+                        drypre
+                    )
+                )
             flags = np.logical_not(flags)
-        
+
         # Now apply flags
         if verb:
-            print('Vampirisms: {:s} applying flags to data.'.format(drypre))
+            print("Vampirisms: {:s} applying flags to data.".format(drypre))
         if not dryrun:
-            oflags = t.getcol('FLAG')
-            oflags[flags,:,:] = True
-            t.putcol('FLAG', oflags)
+            oflags = t.getcol("FLAG")
+            oflags[flags, :, :] = True
+            t.putcol("FLAG", oflags)
 
-        print('Vampirisms: finis.')
+        print("Vampirisms: finis.")
 
-        if isinstance(t, type('')):
+        if isinstance(t, type("")):
             t.close()
-            
+
         return flags
 
-#if __name__ == '__main__':
+
+# if __name__ == '__main__':
 #    a = np.zeros((767), dtype=bool)
 #    a[1:35] = True
 #    mysb = Sunblocker()
 #    mysb.phazer(inset = ['yoyo.ms'], outset = ['yoyout.ms'], channels = a, imsize = 512, cell = 4, pol = 'i', threshold = 4., mode = 'all', radrange = 0, angle = 0, show = 'test.pdf', verb = True, dryrun = False)
-#mysb.vampirisms(inset = 'yoyo.ms', lat = -30.721*units.deg, lon = 21.411*units.deg, hei = 100.*units.m, dryrun = True, avantsoleil = 1.*units.s, apresnuit = 2.*units.s, avantnuit = 3.*units.s, apresoleil = 4.*units.s, horizon = -34.*units.arcmin, nononsoleil = False, flinvert = False, verb = True)
+# mysb.vampirisms(inset = 'yoyo.ms', lat = -30.721*units.deg, lon = 21.411*units.deg, hei = 100.*units.m, dryrun = True, avantsoleil = 1.*units.s, apresnuit = 2.*units.s, avantnuit = 3.*units.s, apresoleil = 4.*units.s, horizon = -34.*units.arcmin, nononsoleil = False, flinvert = False, verb = True)
