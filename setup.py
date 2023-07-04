@@ -75,4 +75,9 @@ setup(
     package_data={pkg: src_pkg_dirs(pkg)},
     include_package_data=True,
     python_requires=">=3.8",
+    entry_points={
+        "console_scripts": [
+            "phazer=sunblocker.phazer:cli",
+        ],
+    },
 )
