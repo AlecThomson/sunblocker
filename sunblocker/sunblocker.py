@@ -1,10 +1,4 @@
-# Copyright (c) 2017 Gyula Istvan Geza Jozsa, Paolo Serra, Kshitij Thorat, Sphesihle Makhatini, NRF (Square Kilometre Array South Africa) - All Rights Reserved
-import types
-
-import matplotlib
-
-matplotlib.use("Agg")
-
+#!/usr/bin/env python3
 """
 Class Sunblocker
 
@@ -17,6 +11,10 @@ Methods:
     histoclip           - Measure sigma and return a mask indicating data at a distance larger than threshold times sigma from the average
     readdata            - Open a data set inset and return a few tables
     phazer              - Flag Measurement Set based on scalarly averaged data
+
+Copyright (c) 2017 Gyula Istvan Geza Jozsa, Paolo Serra, Kshitij Thorat, Sphesihle Makhatini, NRF (Square Kilometre Array South Africa) - All Rights Reserved
+
+    
 """
 import os
 import sys
@@ -26,6 +24,7 @@ import astropy.coordinates as coordinates
 import astropy.time as time
 import astropy.units as units
 import ephem
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pyrap.tables as tables
@@ -34,6 +33,8 @@ import scipy.optimize as opt
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from scipy import stats
+
+matplotlib.use("Agg")
 
 
 class Sunblocker:
