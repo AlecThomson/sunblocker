@@ -35,16 +35,9 @@ from matplotlib.path import Path
 from scipy import stats
 from tqdm.auto import tqdm
 
-matplotlib.use("Agg")
+from sunblocker.loggers import logger
 
-logger = logging.getLogger(__name__)
-formatter = logging.Formatter(
-    "%(asctime)s %(levelname)s %(name)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-)
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.WARNING)
+matplotlib.use("Agg")
 
 
 class Sunblocker:
