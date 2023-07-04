@@ -4,6 +4,7 @@
 Logger configuration for SunBlocker
 """
 import logging
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 stream_handler = logging.StreamHandler()
