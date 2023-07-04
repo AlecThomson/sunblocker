@@ -380,10 +380,8 @@ class Sunblocker:
         logger.info("Phazer: acquiring spectral information.")
         avspecchan = np.average(t.SPECTRAL_WINDOW.getcol("CHAN_FREQ"))
         logger.info(
-                "Phazer: average wavelength is {:.3f} m.".format(
-                    scconstants.c / avspecchan
-                )
-            )  # This is for testing: should be ~0.21 if local HI
+            "Phazer: average wavelength is {:.3f} m.".format(scconstants.c / avspecchan)
+        )  # This is for testing: should be ~0.21 if local HI
 
         logger.info("Phazer: reading and calculating approximate uv coordinates.")
         uv = t.getcol("UVW")[:, :2] * avspecchan / scconstants.c
@@ -648,9 +646,7 @@ class Sunblocker:
 
         # Now additionally flag all night visibilities if user wants
         if vampirisms:
-            logger.info(
-                "Phazer: applying vampirisms to dataset {:s}.".format(inset[0])
-            )
+            logger.info("Phazer: applying vampirisms to dataset {:s}.".format(inset[0]))
 
             #            print'finding out about dayflags:'
             #            print np.all(dayflags)
@@ -671,7 +667,11 @@ class Sunblocker:
                 antenna2plus,
                 antennanamesplus,
             ) = self.readdata(
-                tutu, col=col, fields=fields, channels=channels, pol=pol,
+                tutu,
+                col=col,
+                fields=fields,
+                channels=channels,
+                pol=pol,
             )
             if vampirisms or flagonlyday:
                 dayflagsplus = self.vampirisms(
@@ -1008,9 +1008,7 @@ class Sunblocker:
             flaggeduv = flaggeduv.reshape(flaggeduv.size // 2, 2)
             befflaggeduv = flaggeduv.copy()
 
-            logger.info(
-                "Phazer: processing {:d} points.".format(flaggeduv.size // 2)
-            )
+            logger.info("Phazer: processing {:d} points.".format(flaggeduv.size // 2))
             for i in range(flaggeduv.size // 2):
                 if i % 500 == 0:
                     logger.info("Phazer: extended {:d} points.".format(i))
@@ -1194,9 +1192,7 @@ class Sunblocker:
                 )
             )
         else:
-            logger.info(
-                "Vampirisms: {0:s} flagging starts at sunrise".format(drypre)
-            )
+            logger.info("Vampirisms: {0:s} flagging starts at sunrise".format(drypre))
         if not nononsoleil:
             if apresnuit != 0.0:
                 logger.info(
@@ -1205,9 +1201,7 @@ class Sunblocker:
                     )
                 )
             else:
-                logger.info(
-                    "Vampirisms: {:s} flagging ends at sunrise".format(drypre)
-                )
+                logger.info("Vampirisms: {:s} flagging ends at sunrise".format(drypre))
             if avantnuit != 0.0:
                 logger.info(
                     "Vampirisms: {0:s} flagging starts {1:s} before sunset.".format(
@@ -1350,12 +1344,8 @@ class Sunblocker:
                 logger.info(
                     "Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC).".format(
                         drypre,
-                        ephem.Date(estihad)
-                        .datetime()
-                        .strftime("%Y-%m-%d, %H:%M:%S"),
-                        ephem.Date(eetihad)
-                        .datetime()
-                        .strftime("%Y-%m-%d, %H:%M:%S"),
+                        ephem.Date(estihad).datetime().strftime("%Y-%m-%d, %H:%M:%S"),
+                        ephem.Date(eetihad).datetime().strftime("%Y-%m-%d, %H:%M:%S"),
                     )
                 )
                 flags = flags + (etimes >= float(estiapp)) * (float(eetiapp) >= etimes)
@@ -1370,12 +1360,8 @@ class Sunblocker:
                 logger.info(
                     "Vampirisms: {0:s} flagging between {1:s} (UTC) and {2:s} (UTC) and".format(
                         drypre,
-                        ephem.Date(estihad)
-                        .datetime()
-                        .strftime("%Y-%m-%d, %H:%M:%S"),
-                        ephem.Date(eetiapp)
-                        .datetime()
-                        .strftime("%Y-%m-%d, %H:%M:%S"),
+                        ephem.Date(estihad).datetime().strftime("%Y-%m-%d, %H:%M:%S"),
+                        ephem.Date(eetiapp).datetime().strftime("%Y-%m-%d, %H:%M:%S"),
                     )
                 )
                 if estiapp2 < eobsend:
@@ -1461,8 +1447,21 @@ class Sunblocker:
         return flags
 
 
-if __name__ == '__main__':
-   a = np.zeros((767), dtype=bool)
-   a[1:35] = True
-   mysb = Sunblocker(verb=True)
-   mysb.phazer(inset = ['yoyo.ms'], outset = ['yoyout.ms'], channels = a, imsize = 512, cell = 4, pol = 'i', threshold = 4., mode = 'all', radrange = 0, angle = 0, show = 'test.pdf', dryrun = False)
+if __name__ == "__main__":
+    a = np.zeros((767), dtype=bool)
+    a[1:35] = True
+    mysb = Sunblocker(verb=True)
+    mysb.phazer(
+        inset=["yoyo.ms"],
+        outset=["yoyout.ms"],
+        channels=a,
+        imsize=512,
+        cell=4,
+        pol="i",
+        threshold=4.0,
+        mode="all",
+        radrange=0,
+        angle=0,
+        show="test.pdf",
+        dryrun=False,
+    )
