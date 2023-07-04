@@ -1424,21 +1424,21 @@ class Sunblocker:
         return flags
 
 
-if __name__ == "__main__":
-    a = np.zeros((767), dtype=bool)
-    a[1:35] = True
-    mysb = Sunblocker(verb=True)
-    mysb.phazer(
-        inset=["yoyo.ms"],
-        outset=["yoyout.ms"],
-        channels=a,
-        imsize=512,
-        cell=4,
-        pol="i",
-        threshold=4.0,
-        mode="all",
-        radrange=0,
-        angle=0,
-        show="test.pdf",
-        dryrun=False,
-    )
+# if __name__ == "__main__":
+#     a = np.zeros((767), dtype=bool)
+#     a[1:35] = True
+#     mysb = Sunblocker(verb=True)
+#     mysb.phazer(
+#         inset=["yoyo.ms"],
+#         outset=["yoyout.ms"],
+#         channels=a,
+#         imsize=512,
+#         cell=4,
+#         pol="i",
+#         threshold=4.0,
+#         mode="all",
+#         radrange=0,
+#         angle=0,
+#         show="test.pdf",
+#         dryrun=False,
+#     )
