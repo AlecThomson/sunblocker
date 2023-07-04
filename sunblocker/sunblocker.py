@@ -861,7 +861,7 @@ class Sunblocker:
             )
             plt.xlabel("u")
             plt.ylabel("v")
-            if isinstance(show, type("")):
+            if isinstance(show, str):
                 savefile = os.path.join(showdir, "griddedvis_" + show)
                 plt.savefig(savefile)
                 plt.close()
