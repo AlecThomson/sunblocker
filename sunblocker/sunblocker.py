@@ -60,7 +60,7 @@ class Sunblocker:
         """
 
         # This is where we check what is opened
-        if type(inset) != type(""):
+        if not isinstance(inset, str):
             return inset
 
         old_stdout = sys.stdout
@@ -276,7 +276,7 @@ class Sunblocker:
         # Build a new mask based on the statistics and return it
         #    select = av <= average-threshold*stdev
         select = av >= ave + threshold * std
-        if not isinstance(unflags, type(None)):
+        if unflags is not None:
             select = select * np.logical_not(unflags)
 
         # Plot histogram and Gaussians
@@ -350,7 +350,7 @@ class Sunblocker:
         """
 
         # We really don't want to hear about this
-        if type(inset) == type(""):
+        if isinstance(inset, str):
             t = self.opensilent(inset)
         else:
             t = inset
@@ -415,11 +415,11 @@ class Sunblocker:
         #        flags[:,:,0] = np.logical_not((stflags.astype(bool)))
 
         # Also mask anything not listed in fields
-        if not isinstance(fields, type(None)):
+        if fields is not None:
             logger.info("Selecting specified fields.")
             field = t.getcol("FIELD")
             select = np.zeros(field.shape, dtype=bool)
-            if isinstance(fields, type([])):
+            if isinstance(fields, list):
                 for i in fields:
                     select |= field == i
             else:
@@ -437,12 +437,12 @@ class Sunblocker:
         flags[antenna1 == antenna2] = True
 
         # Select channels and flag everything outside provided channels
-        if not isinstance(channels, type(None)):
+        if channels is not None:
             logger.info("selecting specified channels.")
             flags[:, np.logical_not(channels)] = True
 
         # Select baselines and select everything outside provided baselines
-        if not isinstance(baselines, type(None)):
+        if baselines is not None:
             logger.info("selecting specified baselines.")
             flags[
                 np.logical_not(
@@ -462,7 +462,7 @@ class Sunblocker:
         antennanames = t.ANTENNA.getcol("NAME")
 
         # Close only if this has been a string
-        if isinstance(inset, type("")):
+        if isinstance(inset, str):
             t.close()
 
         return data, flags, uv, antenna1, antenna2, antennanames
@@ -589,11 +589,11 @@ class Sunblocker:
         # Open data set as table
         logger.info("opening input files.")
 
-        if inset == None:
+        if inset is None:
             logger.info("No input. Stopping.")
             logger.info("exiting (successfully).")
 
-        if type(inset) == type(""):
+        if isinstance(inset, str):
             inset = [inset]
 
         if len(inset) == 1:
@@ -974,7 +974,7 @@ class Sunblocker:
                         )
                     i = i + 1
         if show != None:
-            if isinstance(show, type("")):
+            if isinstance(show, str):
                 plt.savefig(showdir + "/" + "histo_" + show)
                 plt.close()
             else:
@@ -1054,14 +1054,14 @@ class Sunblocker:
             ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3)
             if radrange > 0.0 and angle > 0.0:
                 ax.plot(befflaggeduv[:, 0], befflaggeduv[:, 1], ".g", markersize=0.3)
-            if isinstance(show, type("")):
+            if isinstance(show, str):
                 plt.savefig(showdir + "/" + "select_" + show)
                 plt.close()
             else:
                 plt.show()
                 plt.close()
 
-        if isinstance(outset, type("")):
+        if isinstance(outset, str):
             outset = [outset]
 
         if outset == None:
@@ -1208,7 +1208,7 @@ class Sunblocker:
             )
 
         # We really don't want to hear about this
-        if isinstance(inset, type("")):
+        if isinstance(inset, str):
             logger.info("opening visibility file {:s}.".format(inset))
         else:
             logger.info("opening visibility file {:s}.".format(inset.name()))
@@ -1418,7 +1418,7 @@ class Sunblocker:
 
         logger.info("finis.")
 
-        if isinstance(t, type("")):
+        if isinstance(t, str):
             t.close()
 
         return flags
