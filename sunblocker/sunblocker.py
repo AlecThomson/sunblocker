@@ -679,7 +679,7 @@ class Sunblocker:
         tutu.close()
         nrows.append(data.shape[0])
 
-        for i in range(1, len(inset)):
+        for i in tqdm(range(1, len(inset)), desc="Reading data"):
             if verb:
                 logger.info("Phazer: reading {:s}.".format(inset[i]))
             tutu = self.opensilent(inset[i])
@@ -817,8 +817,8 @@ class Sunblocker:
         ###
 
         collaflags = np.all(flags, axis=1)
-        for uu in ugrid:
-            for vv in vgrid:
+        for uu in tqdm(ugrid, desc="Looping over u"):
+            for vv in tqdm(vgrid, desc="Looping over v", leave=False):
                 #                active_visibs = (u > uu)*(u <= (uu+duv))*(v > vv)*(v <= (vv+duv))
                 if uvmax == None:
                     active_visibs = (
