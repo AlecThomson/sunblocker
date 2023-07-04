@@ -33,6 +33,7 @@ import scipy.optimize as opt
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from scipy import stats
+from tqdm.auto import tqdm
 
 matplotlib.use("Agg")
 

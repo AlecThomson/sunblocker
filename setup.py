@@ -74,5 +74,5 @@ setup(
     install_requires=requirements(),
     package_data={pkg: src_pkg_dirs(pkg)},
     include_package_data=True,
-    python_requires=">=2.6",
+    python_requires=">=3.8",
 )
