@@ -302,16 +302,17 @@ class Sunblocker:
             # In case of using only stats, this is right on top
             fitted = self.gaussian(showgouse, popt[0], popt[1], popt[2])
 
-            ax.bar(bin_centers, hist, width=widthes, color="y", edgecolor="y")
-            ax.plot(showgouse, calculated, "g-")
-            ax.plot(showgouse, fitted, "r-")
-            ax.plot(showgouse, madded, "b-")
+            ax.bar(bin_centers, hist, width=widthes, color="y", edgecolor="y", label="histogram")
+            ax.plot(showgouse, calculated, "g-", label="calculated")
+            ax.plot(showgouse, fitted, "r-", label="fitted")
+            ax.plot(showgouse, madded, "b-", label="mad")
             ax.axvline(x=average - threshold * stdev, linewidth=2, color="k")
             ax.axvline(x=average + threshold * stdev, linewidth=2, color="k")
             ax.set_xlim(min(bin_edges), max(bin_edges))
             ax.set_title(title)
             ax.set_xlabel("Amplitude")
             ax.set_ylabel("Number of visibilities")
+            ax.legend()
 
         return select
 
