@@ -16,9 +16,9 @@ Copyright (c) 2017 Gyula Istvan Geza Jozsa, Paolo Serra, Kshitij Thorat, Sphesih
 
     
 """
+import logging
 import os
 import sys
-import logging
 
 import astropy.coordinates as coordinates
 import astropy.time as time
@@ -230,7 +230,9 @@ class Sunblocker:
             return np.zeros(av.shape, dtype=bool)
 
         if stdev == np.nan:
-            logger.info("Phazer: cannot calculate standard deviation, returing no flags")
+            logger.info(
+                "Phazer: cannot calculate standard deviation, returing no flags"
+            )
             return np.zeros(av.shape, dtype=bool)
 
         med = np.nanmedian(uvgridded)
@@ -669,7 +671,9 @@ class Sunblocker:
         # Now additionally flag all night visibilities if user wants
         if vampirisms:
             if verb:
-                logger.info("Phazer: applying vampirisms to dataset {:s}.".format(inset[0]))
+                logger.info(
+                    "Phazer: applying vampirisms to dataset {:s}.".format(inset[0])
+                )
 
             #            print'finding out about dayflags:'
             #            print np.all(dayflags)
@@ -1044,7 +1048,9 @@ class Sunblocker:
             befflaggeduv = flaggeduv.copy()
 
             if verb:
-                logger.info("Phazer: processing {:d} points.".format(flaggeduv.size // 2))
+                logger.info(
+                    "Phazer: processing {:d} points.".format(flaggeduv.size // 2)
+                )
             for i in range(flaggeduv.size // 2):
                 if i % 500 == 0:
                     logger.info("Phazer: extended {:d} points.".format(i))
@@ -1241,7 +1247,9 @@ class Sunblocker:
                     )
                 )
             else:
-                logger.info("Vampirisms: {0:s} flagging starts at sunrise".format(drypre))
+                logger.info(
+                    "Vampirisms: {0:s} flagging starts at sunrise".format(drypre)
+                )
             if not nononsoleil:
                 if apresnuit != 0.0:
                     logger.info(
@@ -1250,7 +1258,9 @@ class Sunblocker:
                         )
                     )
                 else:
-                    logger.info("Vampirisms: {:s} flagging ends at sunrise".format(drypre))
+                    logger.info(
+                        "Vampirisms: {:s} flagging ends at sunrise".format(drypre)
+                    )
                 if avantnuit != 0.0:
                     logger.info(
                         "Vampirisms: {0:s} flagging starts {1:s} before sunset.".format(
@@ -1278,7 +1288,9 @@ class Sunblocker:
             if isinstance(inset, type("")):
                 logger.info("Vampirisms: opening visibility file {:s}.".format(inset))
             else:
-                logger.info("Vampirisms: opening visibility file {:s}.".format(inset.name()))
+                logger.info(
+                    "Vampirisms: opening visibility file {:s}.".format(inset.name())
+                )
 
         # This is either a string or a data set, it will return the right thing
         if dryrun:
@@ -1329,7 +1341,9 @@ class Sunblocker:
             logger.info(
                 "Vampirisms: the observation started at {:s} (UTC)".format(obstart.iso)
             )
-            logger.info("Vampirisms: the observation ended at {:s} (UTC)".format(obsend.iso))
+            logger.info(
+                "Vampirisms: the observation ended at {:s} (UTC)".format(obsend.iso)
+            )
 
         etimes = self.astropy_to_pyephemtime(times)
 
