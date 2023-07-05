@@ -16,8 +16,7 @@ from sunblocker.sunblocker import Sunblocker
 def parse_args() -> argparse.Namespace:
     """Command line interface for SunBlocker"""
     parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     parser.add_argument(

@@ -21,7 +21,6 @@ import os
 import sys
 
 import astropy.coordinates as coordinates
-from astropy.stats import mad_std, sigma_clip
 import astropy.time as time
 import astropy.units as units
 import ephem
@@ -31,6 +30,7 @@ import numpy as np
 import pyrap.tables as tables
 import scipy.constants as scconstants
 import scipy.optimize as opt
+from astropy.stats import mad_std, sigma_clip
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from scipy import stats
@@ -217,8 +217,8 @@ class Sunblocker:
 
         # Do some sigma clipping
         uvgridded_clipped = sigma_clip(
-            uvgridded, 
-            sigma=threshold, 
+            uvgridded,
+            sigma=threshold,
             maxiters=None,
             stdfunc=mad_std,
             cenfunc=np.nanmedian,
@@ -246,7 +246,8 @@ class Sunblocker:
         if threshmode == "fit" or ax != None:
             # Build a histogram
             hist, bin_edges = np.histogram(
-                uvgridded_clipped[np.isfinite(uvgridded_clipped)], bins=int(np.sqrt(npoints_clipped)) + 1
+                uvgridded_clipped[np.isfinite(uvgridded_clipped)],
+                bins=int(np.sqrt(npoints_clipped)) + 1,
             )
             bin_centers = bin_edges[:-1] + 0.5 * (bin_edges[1:] - bin_edges[:-1])
             widthes = bin_edges[1:] - bin_edges[:-1]
@@ -317,28 +318,40 @@ class Sunblocker:
             hists, bins, _ = ax.hist(
                 uvgridded_clipped,
                 bins=int(np.sqrt(npoints_clipped)) + 1,
-                # color="y",
                 label="Clipped",
-                # histtype="step",
                 alpha=0.7,
                 density=True,
             )
             ax.hist(
-                uvgridded, 
-                bins=int(np.sqrt(npoints_clipped)) + 1, 
-                # color="k", 
-                label="Unclipped", 
-                # histtype="step",
-                alpha=0.5, 
+                uvgridded,
+                bins=int(np.sqrt(npoints_clipped)) + 1,
+                label="Unclipped",
+                alpha=0.5,
                 density=True,
-                zorder=10
+                zorder=10,
             )
 
-            ax.plot(showgouse, calculated / calculated.max() * hists.max(), label="calculated")
+            ax.plot(
+                showgouse,
+                calculated / calculated.max() * hists.max(),
+                label="calculated",
+            )
             ax.plot(showgouse, fitted / fitted.max() * hists.max(), label="fitted")
             ax.plot(showgouse, madded / madded.max() * hists.max(), label="mad")
-            ax.axvline(x=average - threshold * stdev, linewidth=1, color="k", ls="--", label=f"Lower threshold = {average - threshold * stdev:0.1f}")
-            ax.axvline(x=average + threshold * stdev, linewidth=1, color="tab:red", ls="--", label=f"Upper threshold = {average + threshold * stdev:0.1f}")
+            ax.axvline(
+                x=average - threshold * stdev,
+                linewidth=1,
+                color="k",
+                ls="--",
+                label=f"Lower threshold = {average - threshold * stdev:0.1f}",
+            )
+            ax.axvline(
+                x=average + threshold * stdev,
+                linewidth=1,
+                color="tab:red",
+                ls="--",
+                label=f"Upper threshold = {average + threshold * stdev:0.1f}",
+            )
             ax.set_xlim(0, np.nanmax(uvgridded))
             ax.set_title(title)
             ax.set_xlabel("Amplitude")
@@ -1010,7 +1023,9 @@ class Sunblocker:
                     i = i + 1
         if show != None:
             if isinstance(show, str):
-                plt.savefig(showdir + "/" + "histo_" + show, dpi=300, bbox_inches="tight")
+                plt.savefig(
+                    showdir + "/" + "histo_" + show, dpi=300, bbox_inches="tight"
+                )
                 plt.close()
             else:
                 plt.show()
@@ -1087,13 +1102,29 @@ class Sunblocker:
             # Restrict uvrange to maximum of uvmax and befflaggeduv
             ####
 
-            ax.plot(notflaggeduv[:, 0], notflaggeduv[:, 1], ".b", markersize=0.3, label="Not flagged", rasterized=True)
-            ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3, label="Flagged", zorder=10)
+            ax.plot(
+                notflaggeduv[:, 0],
+                notflaggeduv[:, 1],
+                ".b",
+                markersize=0.3,
+                label="Not flagged",
+                rasterized=True,
+            )
+            ax.plot(
+                flaggeduv[:, 0],
+                flaggeduv[:, 1],
+                ".r",
+                markersize=0.3,
+                label="Flagged",
+                zorder=10,
+            )
             ax.legend()
             if radrange > 0.0 and angle > 0.0:
                 ax.plot(befflaggeduv[:, 0], befflaggeduv[:, 1], ".g", markersize=0.3)
             if isinstance(show, str):
-                plt.savefig(showdir + "/" + "select_" + show, dpi=300, bbox_inches="tight")
+                plt.savefig(
+                    showdir + "/" + "select_" + show, dpi=300, bbox_inches="tight"
+                )
                 plt.close()
             else:
                 plt.show()
