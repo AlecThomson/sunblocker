@@ -128,36 +128,36 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-A",
         "--avantsoleil",
-        help="Time to be evaluated before sunrise in astropy units (defaults to 30 minutes)",
-        default=30,
+        help="Time to be evaluated before sunrise in astropy units (defaults to 0 minutes)",
+        default=0,
         type=float,
     )
     parser.add_argument(
         "-N",
         "--apresnuit",
-        help="Time to be evaluated after sunrise in astropy units (defaults to 60 minutes)",
-        default=60,
+        help="Time to be evaluated after sunrise in astropy units (defaults to 0 minutes)",
+        default=0,
         type=float,
     )
     parser.add_argument(
         "-n",
         "--avantnuit",
-        help="Time to be evaluated before sunset in astropy units (defaults to 60 minutes)",
-        default=60,
+        help="Time to be evaluated before sunset in astropy units (defaults to 0 minutes)",
+        default=0,
         type=float,
     )
     parser.add_argument(
         "-O",
         "--apresoleil",
-        help="Time to be evaluated after sunset in astropy units (defaults to 30 minutes)",
-        default=30,
+        help="Time to be evaluated after sunset in astropy units (defaults to 0 minutes)",
+        default=0,
         type=float,
     )
     parser.add_argument(
         "-H",
         "--horizon",
-        help="Height above horizon of the sun to define sunset in astropy units (defaults to -34 arcmin)",
-        default=-34,
+        help="Height above horizon of the sun to define sunset in astropy units (defaults to 0 arcmin)",
+        default=0,
         type=float,
     )
     parser.add_argument(
@@ -248,10 +248,10 @@ def cli() -> None:
         angle=args.angle,
         flagonlyday=args.flagonlyday,
         vampirisms=args.vampirisms,
-        avantsoleil=args.avantsoleil * units.s,
-        apresnuit=args.apresnuit * units.s,
-        avantnuit=args.avantnuit * units.s,
-        apresoleil=args.apresoleil * units.s,
+        avantsoleil=args.avantsoleil * units.minute,
+        apresnuit=args.apresnuit * units.minute,
+        avantnuit=args.avantnuit * units.minute,
+        apresoleil=args.apresoleil * units.minute,
         horizon=-args.horizon * units.arcmin,
         nononsoleil=args.nononsoleil,
         uvmin=args.uvmin,
