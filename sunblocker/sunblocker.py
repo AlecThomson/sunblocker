@@ -907,8 +907,8 @@ class Sunblocker:
                 extent=[ugrid.max() + duv, ugrid.min(), vgrid.min(), vgrid.max() + duv],
             )
             plt.colorbar()
-            plt.xlabel("u")
-            plt.ylabel("v")
+            plt.xlabel("u / $\lambda$")
+            plt.ylabel("v/ $\lambda$")
             if isinstance(show, str):
                 savefile = os.path.join(showdir, "griddedvis_" + show)
                 plt.savefig(savefile, dpi=300, bbox_inches="tight")
@@ -1082,8 +1082,8 @@ class Sunblocker:
                 extent=[ugrid.max() + duv, ugrid.min(), vgrid.min(), vgrid.max() + duv],
             )
             fig.colorbar(im)
-            ax.set_xlabel("u")
-            ax.set_ylabel("v")
+            ax.set_xlabel("u / $\lambda$")
+            ax.set_ylabel("v / $\lambda$")
             for patch in patches:
                 ax.add_patch(patch)
             flaggeduv = uv[np.column_stack((newflags, newflags))]
