@@ -21,6 +21,7 @@ import os
 import sys
 
 import astropy.coordinates as coordinates
+from astropy.stats import mad_std, sigma_clip
 import astropy.time as time
 import astropy.units as units
 import ephem
@@ -214,9 +215,20 @@ class Sunblocker:
             )
             return np.zeros(av.shape, dtype=bool)
 
+        # Do some sigma clipping
+        uvgridded_clipped = sigma_clip(
+            uvgridded, 
+            sigma=threshold, 
+            maxiters=None,
+            stdfunc=mad_std,
+            cenfunc=np.nanmedian,
+            masked=False,
+        )
+        npoints_clipped = uvgridded_clipped[np.isfinite(uvgridded_clipped)].size
+
         # Find average and standard deviation
-        average = np.nanmean(uvgridded)
-        stdev = np.nanstd(uvgridded)
+        average = np.nanmean(uvgridded_clipped)
+        stdev = np.nanstd(uvgridded_clipped)
 
         logger.info("average: {}, stdev: {}".format(average, stdev))
 
@@ -228,13 +240,13 @@ class Sunblocker:
             logger.info("cannot calculate standard deviation, returing no flags")
             return np.zeros(av.shape, dtype=bool)
 
-        med = np.nanmedian(uvgridded)
-        mad = stats.median_abs_deviation(uvgridded, scale="normal", nan_policy="omit")
+        med = np.nanmedian(uvgridded_clipped)
+        mad = mad_std(uvgridded_clipped)
 
         if threshmode == "fit" or ax != None:
             # Build a histogram
             hist, bin_edges = np.histogram(
-                uvgridded[np.isfinite(uvgridded)], bins=int(np.sqrt(npoints)) + 1
+                uvgridded_clipped[np.isfinite(uvgridded_clipped)], bins=int(np.sqrt(npoints_clipped)) + 1
             )
             bin_centers = bin_edges[:-1] + 0.5 * (bin_edges[1:] - bin_edges[:-1])
             widthes = bin_edges[1:] - bin_edges[:-1]
@@ -302,16 +314,35 @@ class Sunblocker:
             # In case of using only stats, this is right on top
             fitted = self.gaussian(showgouse, popt[0], popt[1], popt[2])
 
-            ax.bar(bin_centers, hist, width=widthes, color="y", edgecolor="y", label="histogram")
-            ax.plot(showgouse, calculated, "g-", label="calculated")
-            ax.plot(showgouse, fitted, "r-", label="fitted")
-            ax.plot(showgouse, madded, "b-", label="mad")
-            ax.axvline(x=average - threshold * stdev, linewidth=2, color="k", label="Lower threshold")
-            ax.axvline(x=average + threshold * stdev, linewidth=2, color="k", label="Upper threshold")
-            ax.set_xlim(min(bin_edges), max(bin_edges))
+            hists, bins, _ = ax.hist(
+                uvgridded_clipped,
+                bins=int(np.sqrt(npoints_clipped)) + 1,
+                # color="y",
+                label="Clipped",
+                # histtype="step",
+                alpha=0.7,
+                density=True,
+            )
+            ax.hist(
+                uvgridded, 
+                bins=int(np.sqrt(npoints_clipped)) + 1, 
+                # color="k", 
+                label="Unclipped", 
+                # histtype="step",
+                alpha=0.5, 
+                density=True,
+                zorder=10
+            )
+
+            ax.plot(showgouse, calculated / calculated.max() * hists.max(), label="calculated")
+            ax.plot(showgouse, fitted / fitted.max() * hists.max(), label="fitted")
+            ax.plot(showgouse, madded / madded.max() * hists.max(), label="mad")
+            ax.axvline(x=average - threshold * stdev, linewidth=1, color="k", ls="--", label=f"Lower threshold = {average - threshold * stdev}")
+            ax.axvline(x=average + threshold * stdev, linewidth=1, color="tab:red", ls="--", label=f"Upper threshold = {average + threshold * stdev}")
+            ax.set_xlim(0, np.nanmax(uvgridded))
             ax.set_title(title)
             ax.set_xlabel("Amplitude")
-            ax.set_ylabel("Number of visibilities")
+            ax.set_ylabel("PDF")
             ax.legend()
 
         return select
@@ -867,7 +898,7 @@ class Sunblocker:
             plt.ylabel("v")
             if isinstance(show, str):
                 savefile = os.path.join(showdir, "griddedvis_" + show)
-                plt.savefig(savefile)
+                plt.savefig(savefile, dpi=300, bbox_inches="tight")
                 plt.close()
             else:
                 plt.show()
@@ -979,7 +1010,7 @@ class Sunblocker:
                     i = i + 1
         if show != None:
             if isinstance(show, str):
-                plt.savefig(showdir + "/" + "histo_" + show)
+                plt.savefig(showdir + "/" + "histo_" + show, dpi=300, bbox_inches="tight")
                 plt.close()
             else:
                 plt.show()
@@ -1056,12 +1087,13 @@ class Sunblocker:
             # Restrict uvrange to maximum of uvmax and befflaggeduv
             ####
 
-            ax.plot(notflaggeduv[:, 0], notflaggeduv[:, 1], ".b", markersize=0.3, label="Not flagged")
-            ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3, label="Flagged")
+            ax.plot(notflaggeduv[:, 0], notflaggeduv[:, 1], ".b", markersize=0.3, label="Not flagged", rasterized=True)
+            ax.plot(flaggeduv[:, 0], flaggeduv[:, 1], ".r", markersize=0.3, label="Flagged", zorder=10)
+            ax.legend()
             if radrange > 0.0 and angle > 0.0:
                 ax.plot(befflaggeduv[:, 0], befflaggeduv[:, 1], ".g", markersize=0.3)
             if isinstance(show, str):
-                plt.savefig(showdir + "/" + "select_" + show)
+                plt.savefig(showdir + "/" + "select_" + show, dpi=300, bbox_inches="tight")
                 plt.close()
             else:
                 plt.show()
